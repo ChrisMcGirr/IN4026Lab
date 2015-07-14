@@ -52,7 +52,7 @@ int main(int argc, char **argv)
 	//Start of the Algorithm
 	int j;
 	double average;
-	for(j=0; j<20000; j++){
+	for(j=0; j<50000; j++){
 		start = clock();
 		psMin(A, P, S, n);
 		end = clock();
@@ -62,17 +62,18 @@ int main(int argc, char **argv)
 	}	
 	//End of Algorithm
 
-	printf("Average Computation Time %fs\n",average);
+	printf("Average Computation Time %fs for an input size of %d \n",average, n);
 	if(atoi(argv[3]) && atoi(argv[4]))
 	{
 		status = outputCheck(P, S, argv[3], argv[4], n);
+		if(status){
+			printf("Incorrect Answer\n");
+		}
+		else{
+			printf("Correct Answer\n");
+		}
 	}
-	if(status){
-		printf("Incorrect Answer\n");
-	}
-	else{
-		printf("Correct Answer\n");
-	}
+
 	status = write_output(P, S, n);
 
 	if(status){
@@ -138,7 +139,7 @@ int write_Array(int* A, int n){
 
 	FILE *output;
 	char name[16];
-	snprintf(name, sizeof(name), "input_%d.txt", n);
+	snprintf(name, sizeof(name), "Input_Data/input_%d.txt", n);
 	output = fopen(name, "w");
 	if(output==NULL){
 		#ifdef DEBUG	

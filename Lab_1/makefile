@@ -6,10 +6,12 @@ compile: seq.c
 run:
 	$(EXE) input.txt 32 P_ans.txt S_ans.txt	
 batch:
-	i=1 ; while[[ $$i 16 48 ]] ; do
-	$(EXE) /Input_Data/input_$$i.txt $$i 0 0 
-	((i=i+1));
+	@echo "Starting Batch Run of Varying Input Sizes 16-48"	
+	@echo "" > batch_results.txt
+	@for n in $(shell seq 16 48); do\
+		$(EXE) Input_Data/input_$$n.txt $$n 0 0 >> batch_results.txt; \
 	done
+	@echo "Finised Batch Run. Check batch_results.txt"
 
 .PHONY: clean
 
