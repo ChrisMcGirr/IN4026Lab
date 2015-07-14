@@ -1,0 +1,17 @@
+CC=gcc
+EXE=./seq
+
+compile: seq.c
+	$(CC) seq.c -o seq
+run:
+	$(EXE) input.txt 32 P_ans.txt S_ans.txt	
+batch:
+	i=1 ; while[[ $$i 16 48 ]] ; do
+	$(EXE) /Input_Data/input_$$i.txt $$i 0 0 
+	((i=i+1));
+	done
+
+.PHONY: clean
+
+clean:
+	rm results.txt seq
