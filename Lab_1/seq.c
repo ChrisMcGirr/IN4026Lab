@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 	//End of Algorithm
 
 	printf("Average Computation Time %fs for an input size of %d \n",average, n);
-	if(atoi(argv[3]) && atoi(argv[4]))
+	if((atoi(argv[3])!=1) && (atoi(argv[4])!=1))
 	{
 		status = outputCheck(P, S, argv[3], argv[4], n);
 		if(status){
@@ -72,56 +72,25 @@ int main(int argc, char **argv)
 		else{
 			printf("Correct Answer\n");
 		}
+		status = write_output(P, S, n);
+
+		if(status){
+			#ifdef DEBUG	
+			printf("Failed to Write Output \n");
+			#endif
+			return 1;
+		}
 	}
 
-	status = write_output(P, S, n);
 
-	if(status){
-		#ifdef DEBUG	
-		printf("Failed to Write Output \n");
-		#endif
-		return 1;
-	}
 
 	free(P);
 	free(S);
+	free(A);
 	
 	//Used to generate random data sets and save to disk as text files
 //	generateArrays();
 
-/*
-	//Multiple Runs
-	time_t t;
-	srand((unsigned) time(&t));
-	int *B;
-
-	printf("****TEST RESULTS OF VARYING N INPUT SIZE\n");
-	printf("    Size N    Execution Time\n");
-	
-	int i;
-	int k;
-	for(i=1; i<=16; i++){
-		k=n*i;
-		randArray(B, k);
-		P = malloc(k*sizeof(int));
-		if(P==NULL){
-			printf("Failed to allocate P\n");	
-		}
-		S = malloc(k*sizeof(int));
-		if(S==NULL){
-			printf("Failed to allocate S\n");	
-		}
-		start = clock();
-		psMin(B, P, S, k);
-		end = clock();
-		cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-		printf("    %d    %fs \n", k, cpu_time_used);
-		free(B);
-		free(P);
-		free(S);
-	}
-*/	
-	free(A);
 
     	return 0;
 }
