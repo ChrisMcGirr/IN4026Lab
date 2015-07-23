@@ -9,12 +9,13 @@
 
 int read_input(int* A, int n, char* file);
 int write_output(int* P, int* S, int n);
-int minArray(int *A, int n, int i);
+int minArray(int *A, int n);
 int outputCheck(int *P, int *S, char* pfile, char* sfile, int n);
 void psMin(int *A, int *P, int *S, int n);
 void randArray(int *A, int n);
 int write_Array(int* A, int n);
 void generateArrays(void);
+void minima(int *A, int n);
 
 int main(int argc, char **argv)
 {
@@ -51,23 +52,23 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	//Start of the Algorithm
-/*
+
 	int j;
 	double average;
 	for(j=0; j<50000; j++){
 		start = clock();
-		//psMin(A, P, S, n);
+		psMin(A, P, S, n);
 		end = clock();
 		cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
 		if(j==0) average = cpu_time_used;
 		else	 average = (average+cpu_time_used)/2;
 	}	
 	//End of Algorithm
-*/
-	int temp = minArray(A, 24, 0);
-	printf("The Min of A is %d \n", temp);
 
-//	printf("Average Computation Time %fs for an input size of %d \n",average, n);
+//	int temp = minArray(&A[3], 32-3);
+//	printf("The Min of A is %d \n", temp);
+
+	printf("Average Computation Time %fs for an input size of %d \n",average, n);
 	if((atoi(argv[3])!=1) && (atoi(argv[4])!=1))
 	{
 		status = outputCheck(P, S, argv[3], argv[4], n);
@@ -143,66 +144,48 @@ void randArray(int *A, int n){
 }
 void psMin(int *A, int *P, int *S, int n){
 	int i;
+	int *B = malloc(n*sizeof(int));
 	for(i=0; i<n; i++){		
-		P[i] = minArray(A, i+1, 0);
-		S[i] = minArray(A, n, i);
+		memcpy(B, A, n*sizeof(int));
+		P[i] = minArray(B, i+1);
+		B[i] = A[i];
+		S[i] = minArray(&B[i], n-i);
 	}
+	free(B);
 }
 
-int minArray(int *A, int n, int i){
-	int j, l;
-	int k;
-	k = n-i;
-	int *B = malloc(k*sizeof(int));
-	int min, m, p;
+int minArray(int *A, int n){
+	int j, min, m;
+	int i;
 	min = INT_MAX;
-
-	m = ceil(log2(k));
+	m = ceil(log2(n));
 	
-	if(k==1){
-		return A[i];
+	if(n==1){
+		return A[0];
 	}
-	if((k%2) == 1){
-		min = minArray(A,n-1,i);
-	}
+
 	for(j=1;j<=m;j++){
-		printf("Main Loop J = %d  of %d\n", j,m);
-		if(j==1){
-			for(l=0; l<(k/2); l++){
-				p = 2*l;
-				if(A[p+i]>A[p+1+i]) B[l] = A[p+1+i];
-				else B[l] = A[p+i];
-				printf("	Inner Loop l = %d of %d\n", l,(k/2));
-				printf("	Value of A[%d] = %d and Value of A[%d] = %d \n",p+i,A[p+i],p+i+1,A[p+1+i]);
-				printf("	Value of B[%d] = %d \n\n", l, B[l]);
-			}
-			if(((k/2)%2) == 1){
-				if(min > B[k/2]){
-					min = B[k/2];
-				}
-			}
+		if(n%2){
+			min = A[n-1];
 		}
-		else{
-			for(l=0; l<(k>>j);l++){
-				p = 2*l;
-				printf("	Inner Loop l = %d of %d\n", l,(k>>j));
-				printf("	Value of B[%d] = %d and Value of B[%d] = %d \n",p,B[p],p+1,B[p+1]);
-				if(B[p]>B[p+1]) B[l] = B[p+1];
-				else B[l] = B[p];
-				printf("	Value of B[%d] = %d \n\n", l, B[l]);
-				if(l==(k>>j-1)){
-					if(((k>>j)%2) == 1){
-						if(min > B[k>>j]){
-							min = B[k>>j];
-						}
-					}
-				}
-			}
-		}
+		n = n>>1;		
+		minima(A,n);
+		if(A[0]>min) A[0] = min;		
+
 	}
-	if( min > B[0]) min = B[0];
-	free(B);
+
+	if( min > A[0]) min = A[0];
+
 	return min;
+}
+void minima(int *A, int n){
+	int p,l;
+	for(l=0; l<n; l++){
+		p = 2*l;
+		if(A[p]>A[p+1]) A[l] = A[p+1];
+		else A[l] = A[p];
+	}
+
 }
 int outputCheck(int *P, int *S, char* pfile, char* sfile, int n){
 
@@ -220,12 +203,13 @@ int outputCheck(int *P, int *S, char* pfile, char* sfile, int n){
 			correct=1;		
 		}	
 	}
+	if(!correct) printf("P is Correct\n");
 	for(i=0; i<n; i++){
 		if(S[i] != S_ans[i]){
 			correct=1;		
 		}	
 	}
-
+	if(!correct) printf("S is Correct\n");
 	free(P_ans);
 	free(S_ans);
 	
