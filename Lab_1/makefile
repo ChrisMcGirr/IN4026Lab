@@ -3,7 +3,7 @@ SEQ = seq
 OMP = par_openMP
 
 seq: seq.c
-	$(CC) $(SEQ).c -o $(SEQ)
+	$(CC) $(SEQ).c -o $(SEQ) -lm
 	./$(SEQ) input.txt 32 P_ans.txt S_ans.txt
 
 openmp: par_openMP.c

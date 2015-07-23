@@ -88,15 +88,13 @@ int main(int argc, char **argv)
 
 void psMin(int *A, int *P, int *S, int n){
 	int i;
-	//omp_set_nested(1);
-	#pragma omp parallel num_threads(2) shared(P,S,A) private(i)
-	{
-		#pragma omp for nowait
-		for(i=0; i<n; i++){
-			P[i] = minArray(A, i+1, 0);
-			S[i] = minArray(A, n, i);
-		}
+	omp_set_nested(1);
+	#pragma omp parallel for num_threads(8) shared(P,S,A) private(i)
+	for(i=0; i<n; i++){
+		P[i] = minArray(A, i+1, 0);
+		S[i] = minArray(A, n, i);
 	}
+
 
 }
 
@@ -107,13 +105,13 @@ int minArray(int *A, int n, int i){
 	if((n-i) == 1){
 		min = A[i];
 	}
-
+		
 	for(j=i; j<n; j++){
 		if(min>A[j]){
-			min = A[j];
+			min=A[j];
 		}
 	}
-
+	
 	return min;
 }
 int outputCheck(int *P, int *S, char* pfile, char* sfile, int n){
