@@ -3,14 +3,16 @@
 #include <string.h>
 #include <limits.h>
 #include <omp.h>
+#include <math.h>
 
 //#define DEBUG
 
 int read_input(int* A, int n, char* file);
 int write_output(int* P, int* S, int n);
-int minArray(int *A, int n, int i);
+int minArray(int *A, int n);
 int outputCheck(int *P, int *S, char* pfile, char* sfile, int n);
 void psMin(int *A, int *P, int *S, int n);
+void minima(int *A, int n);
 
 int main(int argc, char **argv)
 {
@@ -59,7 +61,7 @@ int main(int argc, char **argv)
 	}	
 	//End of Algorithm
 
-	printf("Average Computation Time %fs for an input size of %d \n",average, n);
+	printf("%d 	%f	s \n",n,average);
 
 	if((atoi(argv[3])!=1) && (atoi(argv[4])!=1))
 	{
@@ -88,31 +90,51 @@ int main(int argc, char **argv)
 
 void psMin(int *A, int *P, int *S, int n){
 	int i;
-	omp_set_nested(1);
-	#pragma omp parallel for num_threads(8) shared(P,S,A) private(i)
+
+	#pragma omp parallel for
 	for(i=0; i<n; i++){
-		P[i] = minArray(A, i+1, 0);
-		S[i] = minArray(A, n, i);
+		int *B = malloc(n*sizeof(int));		
+		memcpy(B, A, n*sizeof(int));
+		P[i] = minArray(B, i+1);
+		B[i] = A[i];
+		S[i] = minArray(&B[i], n-i);
+		free(B);
 	}
-
-
+	
 }
 
-int minArray(int *A, int n, int i){
-	int j;
-	int min = INT_MAX;
+int minArray(int *A, int n){
+	int j, min, m;
+	int i;
+	min = INT_MAX;
+	m = ceil(log2(n));
 	
-	if((n-i) == 1){
-		min = A[i];
+	if(n==1){
+		return A[0];
 	}
-		
-	for(j=i; j<n; j++){
-		if(min>A[j]){
-			min=A[j];
+	for(j=1;j<=m;j++){
+		if(n%2){
+			min = A[n-1];
 		}
+		n = n>>1;		
+		minima(A,n);
+		if(A[0]>min) A[0] = min;		
+
 	}
-	
+
+	if( min > A[0]) min = A[0];
+
 	return min;
+}
+void minima(int *A, int n){
+	int p,l;
+	#pragma omp parallel for
+	for(l=0; l<n; l++){
+		p = 2*l;
+		if(A[p]>A[p+1]) A[l] = A[p+1];
+		else A[l] = A[p];
+	}
+
 }
 int outputCheck(int *P, int *S, char* pfile, char* sfile, int n){
 
@@ -183,7 +205,7 @@ int read_input(int* A, int n, char* file) {
 int write_output(int* P, int* S, int n){
 
 	FILE *output;
-	output = fopen("results_omp.txt", "w");
+	output = fopen("results/results_omp.txt", "w");
 	if(output==NULL){
 		#ifdef DEBUG	
 		printf("Failed to create the Output File \n");

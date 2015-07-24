@@ -68,7 +68,7 @@ int main(int argc, char **argv)
 //	int temp = minArray(&A[3], 32-3);
 //	printf("The Min of A is %d \n", temp);
 
-	printf("Average Computation Time %fs for an input size of %d \n",average, n);
+	printf("%d 	%f	s \n",n,average);
 	if((atoi(argv[3])!=1) && (atoi(argv[4])!=1))
 	{
 		status = outputCheck(P, S, argv[3], argv[4], n);
@@ -257,7 +257,7 @@ int read_input(int* A, int n, char* file) {
 int write_output(int* P, int* S, int n){
 
 	FILE *output;
-	output = fopen("results.txt", "w");
+	output = fopen("results/results.txt", "w");
 	if(output==NULL){
 		#ifdef DEBUG	
 		printf("Failed to create the Output File \n");
