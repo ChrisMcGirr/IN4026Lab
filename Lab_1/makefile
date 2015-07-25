@@ -1,6 +1,7 @@
 CC=gcc
 SEQ = seq
 OMP = par_omp
+POS = par_posix
 
 seq: seq.c
 	$(CC) $(SEQ).c -o $(SEQ) -lm
@@ -9,6 +10,10 @@ seq: seq.c
 omp: par_omp.c
 	$(CC) $(OMP).c -o $(OMP) -fopenmp -lm
 	./$(OMP) input.txt 32 P_ans.txt S_ans.txt
+
+posix: par_posix.c
+	$(CC) $(POS).c -o $(POS) -lpthread -fopenmp -lm
+	./$(POS) input.txt 32 P_ans.txt S_ans.txt
 	
 batch:
 	@echo "Starting Sequential Batch Run of Varying Input Sizes 16-48"	

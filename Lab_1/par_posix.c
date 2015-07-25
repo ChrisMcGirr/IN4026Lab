@@ -2,15 +2,31 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-
+#include <omp.h>
+#include <math.h>
+#include <pthread.h>
+#include <omp.h>
 
 //#define DEBUG
 
+#define MAX_THREADS 8
+
 int read_input(int* A, int n, char* file);
 int write_output(int* P, int* S, int n);
-int minArray(int *A, int n, int i);
+void* minArray(void* input);
 int outputCheck(int *P, int *S, char* pfile, char* sfile, int n);
 void psMin(int *A, int *P, int *S, int n);
+void minima(int *A, int n);
+
+typedef struct data {
+	int *A;
+	int n;
+	int id;
+	int p;
+	int *out;
+	pthread_cond_t *done;
+	int *requests;
+} data;
 
 int main(int argc, char **argv)
 {
@@ -59,7 +75,7 @@ int main(int argc, char **argv)
 	}	
 	//End of Algorithm
 
-	printf("Average Computation Time %fs for an input size of %d \n",average, n);
+	printf("%d 	%f	s \n",n,average);
 
 	if((atoi(argv[3])!=1) && (atoi(argv[4])!=1))
 	{
@@ -88,33 +104,105 @@ int main(int argc, char **argv)
 
 void psMin(int *A, int *P, int *S, int n){
 	int i;
-	//omp_set_nested(1);
-	#pragma omp parallel num_threads(2) shared(P,S,A) private(i)
-	{
-		#pragma omp for nowait
-		for(i=0; i<n; i++){
-			P[i] = minArray(A, i+1, 0);
-			S[i] = minArray(A, n, i);
-		}
-	}
-
-}
-
-int minArray(int *A, int n, int i){
-	int j;
-	int min = INT_MAX;
+	int p = 8;
+	int thr_id;
+	int rc;
+	int requests;
+	pthread_t p_thread;
+	pthread_mutex_t a_mutex = PTHREAD_MUTEX_INITIALIZER;
+	pthread_cond_t done = PTHREAD_COND_INITIALIZER;
 	
-	if((n-i) == 1){
-		min = A[i];
-	}
+	printf("ENTERING LOOP\n");
+	for(i=0; i<n; i++){
+		int *B = malloc(n*sizeof(int));		
+		memcpy(B, A, n*sizeof(int));
 
-	for(j=i; j<n; j++){
-		if(min>A[j]){
-			min = A[j];
+		data *pout = malloc(sizeof(data));
+		pout->A = B;
+		pout->n =  i+1;
+		pout->id = 1;
+		pout->p = MAX_THREADS;
+		pout->out = &P[i];
+		pout->done = &done;
+		pout->requests = &requests; 
+		
+		thr_id = pthread_create(&p_thread, NULL, minArray, pout);
+		
+		rc = pthread_mutex_lock(&a_mutex);	
+
+		data *sout = malloc(sizeof(data));
+		sout->A = B;
+		sout->n =  n-i;
+		sout->id = 0;
+		sout->p = MAX_THREADS;
+		sout->out = &S[i];
+ 		sout->done = NULL;
+		pout->requests = &requests;
+
+		minArray(sout);
+		free(B);
+		if (rc) { /* an error has occurred */
+			perror("pthread_mutex_lock");
+			pthread_exit(NULL);
 		}
+		if(requests==0){
+			rc = pthread_cond_wait(&done, &a_mutex);
+		}
+		pthread_mutex_unlock(&a_mutex);
+		//printf("N is at i=%d\n", i);
+	}
+	printf("LEFT LOOP\n");
+	rc = pthread_cond_destroy(&done);
+	rc = pthread_mutex_destroy(&a_mutex);	
+	
+}
+//int *A, int n, int id, int p, int *out
+void* minArray(void* input){
+	int j, min, m;
+	pthread_cond_t *done;
+	int *A, n, id, p,  *out, *requests;
+	data *in = (data*)input;
+
+	A = in->A;
+	n = in->n;
+	id = in->id;
+	p = in->p;
+	out = in->out;
+	done = in->done;
+	requests = in->requests;
+	
+	min = INT_MAX;
+	m = ceil(log2(n));
+
+	if(n==1){
+		*out = A[0];
+		pthread_exit(NULL);
+	}
+	for(j=1;j<=m;j++){
+		if(n%2){
+			min = A[n-1];
+		}
+		n = n>>1;		
+		minima(A,n);
+		if(A[0]>min) A[0] = min;		
 	}
 
-	return min;
+	if( min > A[0]) min = A[0];
+	*out = min;
+	free(input);
+	if(done){
+		int rc = pthread_cond_signal(done);
+		*requests += 1;
+	}
+}
+void minima(int *A, int n){
+	int p,l;
+	for(l=0; l<n; l++){
+		p = 2*l;
+		if(A[p]>A[p+1]) A[l] = A[p+1];
+		else A[l] = A[p];
+	}
+
 }
 int outputCheck(int *P, int *S, char* pfile, char* sfile, int n){
 
@@ -185,7 +273,7 @@ int read_input(int* A, int n, char* file) {
 int write_output(int* P, int* S, int n){
 
 	FILE *output;
-	output = fopen("results_omp.txt", "w");
+	output = fopen("results/results_posix.txt", "w");
 	if(output==NULL){
 		#ifdef DEBUG	
 		printf("Failed to create the Output File \n");
