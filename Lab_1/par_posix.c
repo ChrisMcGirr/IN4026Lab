@@ -6,6 +6,7 @@
 #include <math.h>
 #include <pthread.h>
 #include <omp.h>
+#include <errno.h>
 
 //#define DEBUG
 
@@ -65,7 +66,7 @@ int main(int argc, char **argv)
 	//Start of the Algorithm
 	int j;
 	double average;
-	for(j=0; j<50000; j++){
+	for(j=0; j<100; j++){
 		start = omp_get_wtime();
 		psMin(A, P, S, n);
 		end = omp_get_wtime();
@@ -107,17 +108,24 @@ void psMin(int *A, int *P, int *S, int n){
 	int p = 8;
 	int thr_id;
 	int rc;
+	int *status;
 	int requests;
 	pthread_t p_thread;
 	pthread_mutex_t a_mutex = PTHREAD_MUTEX_INITIALIZER;
 	pthread_cond_t done = PTHREAD_COND_INITIALIZER;
+	int *B = malloc(n*sizeof(int));	
 	
-	printf("ENTERING LOOP\n");
 	for(i=0; i<n; i++){
-		int *B = malloc(n*sizeof(int));		
-		memcpy(B, A, n*sizeof(int));
+			
+		status = memcpy(B, A, n*sizeof(int));
+		if(!status){
+			printf("MEMCPY Error \n");
+		}
 
 		data *pout = malloc(sizeof(data));
+		if(pout==NULL){
+			printf("Pout Malloc Fail\n");		
+		}
 		pout->A = B;
 		pout->n =  i+1;
 		pout->id = 1;
@@ -128,9 +136,14 @@ void psMin(int *A, int *P, int *S, int n){
 		
 		thr_id = pthread_create(&p_thread, NULL, minArray, pout);
 		
-		rc = pthread_mutex_lock(&a_mutex);	
+		if(thr_id == EAGAIN) printf("NOT ENOUGH RESOURCES AVAILABLE FOR THREAD CREATE\n");
+		if(thr_id == EINVAL) printf("VALUE GIVE BY ATTR IS INVALID\n");
+		if(thr_id == EPERM) printf("CALLER DOES NOT HAVE PERMISSION TO CREATE THREADS\n");	
 
 		data *sout = malloc(sizeof(data));
+		if(sout==NULL){
+			printf("Sout Malloc Fail\n");		
+		}
 		sout->A = B;
 		sout->n =  n-i;
 		sout->id = 0;
@@ -140,21 +153,30 @@ void psMin(int *A, int *P, int *S, int n){
 		pout->requests = &requests;
 
 		minArray(sout);
-		free(B);
+
+		rc = pthread_mutex_lock(&a_mutex);
 		if (rc) { /* an error has occurred */
-			perror("pthread_mutex_lock");
+			printf("pthread_mutex_lock\n");
 			pthread_exit(NULL);
 		}
 		if(requests==0){
 			rc = pthread_cond_wait(&done, &a_mutex);
 		}
 		pthread_mutex_unlock(&a_mutex);
-		//printf("N is at i=%d\n", i);
+		
 	}
-	printf("LEFT LOOP\n");
 	rc = pthread_cond_destroy(&done);
-	rc = pthread_mutex_destroy(&a_mutex);	
-	
+	if (rc) { /* an error has occurred */
+			printf("PTHEARD COND DESTROY ERROR\n");
+
+	}
+	rc = pthread_mutex_destroy(&a_mutex);
+	if (rc) { /* an error has occurred */
+			printf("PTHEARD MUTEX DESTROY ERROR\n");
+
+	}
+	free(B);
+
 }
 //int *A, int n, int id, int p, int *out
 void* minArray(void* input){
@@ -176,7 +198,7 @@ void* minArray(void* input){
 
 	if(n==1){
 		*out = A[0];
-		pthread_exit(NULL);
+		if(done) pthread_exit(NULL);
 	}
 	for(j=1;j<=m;j++){
 		if(n%2){
@@ -193,6 +215,7 @@ void* minArray(void* input){
 	if(done){
 		int rc = pthread_cond_signal(done);
 		*requests += 1;
+		pthread_exit(NULL);
 	}
 }
 void minima(int *A, int n){

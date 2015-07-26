@@ -12,7 +12,8 @@ omp: par_omp.c
 	./$(OMP) input.txt 32 P_ans.txt S_ans.txt
 
 posix: par_posix.c
-	$(CC) $(POS).c -o $(POS) -lpthread -fopenmp -lm
+	$(CC) $(POS).c -o $(POS) -lpthread -fopenmp -lm -g
+
 	./$(POS) input.txt 32 P_ans.txt S_ans.txt
 	
 batch:
