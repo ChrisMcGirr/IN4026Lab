@@ -14,19 +14,19 @@
 
 int read_input(int* A, int n, char* file);
 int write_output(int* P, int* S, int n);
-void* minArray(void* input);
 int outputCheck(int *P, int *S, char* pfile, char* sfile, int n);
-void psMin(int *A, int *P, int *S, int n);
+void* psMin(void* args);
+int minArray(int *A, int n);
 void minima(int *A, int n);
 
 typedef struct data {
 	int *A;
-	int n;
+	int *P;
+	int *S;
+	int n; //Size of the arrays
+	int start; //iteration to j<=n
+	int end;
 	int id;
-	int p;
-	int *out;
-	pthread_cond_t *done;
-	int *requests;
 } data;
 
 int main(int argc, char **argv)
@@ -66,16 +66,37 @@ int main(int argc, char **argv)
 	//Start of the Algorithm
 	int j;
 	double average;
-	for(j=0; j<100; j++){
+	for(j=0; j<5000; j++){
 		start = omp_get_wtime();
-		psMin(A, P, S, n);
+		pthread_t thread_id[MAX_THREADS];
+		int k;
+		data thread_args[MAX_THREADS];
+
+		for(k=0; k<MAX_THREADS; k++){
+			thread_args[k].A = A;
+			thread_args[k].P = P;
+			thread_args[k].S = S;
+			thread_args[k].n = n;
+			thread_args[k].start = k*(n/MAX_THREADS);
+			thread_args[k].end = (k+1)*(n/MAX_THREADS);
+			thread_args[k].id = k;
+		}
+		
+		for(k=0; k<MAX_THREADS-1; k++){
+			pthread_create(&thread_id[k], NULL, &psMin, &thread_args[k]);
+		}
+
+		psMin(&thread_args[MAX_THREADS-1]);
+		
+		for(k=0; k<MAX_THREADS-1; k++){
+			pthread_join(thread_id[k], NULL);
+		}
 		end = omp_get_wtime();
 		cpu_time_used = end-start;
 		if(j==0) average = cpu_time_used;
 		else	 average = (average+cpu_time_used)/2;
 	}	
 	//End of Algorithm
-
 	printf("%d 	%f	s \n",n,average);
 
 	if((atoi(argv[3])!=1) && (atoi(argv[4])!=1))
@@ -103,102 +124,38 @@ int main(int argc, char **argv)
     	return 0;
 }
 
-void psMin(int *A, int *P, int *S, int n){
+void* psMin(void* args){
 	int i;
-	int p = 8;
-	int thr_id;
-	int rc;
-	int *status;
-	int requests;
-	pthread_t p_thread;
-	pthread_mutex_t a_mutex = PTHREAD_MUTEX_INITIALIZER;
-	pthread_cond_t done = PTHREAD_COND_INITIALIZER;
-	int *B = malloc(n*sizeof(int));	
-	
-	for(i=0; i<n; i++){
-			
-		status = memcpy(B, A, n*sizeof(int));
-		if(!status){
-			printf("MEMCPY Error \n");
-		}
+	int *A, *P, *S, n, end, start, id;
+	data *input = (data*)args;
+	A = input->A;
+	P = input->P;
+	S = input->S;
+	n = input->n;
+	start = input->start;
+	end = input->end;
+	id = input->id;
 
-		data *pout = malloc(sizeof(data));
-		if(pout==NULL){
-			printf("Pout Malloc Fail\n");		
-		}
-		pout->A = B;
-		pout->n =  i+1;
-		pout->id = 1;
-		pout->p = MAX_THREADS;
-		pout->out = &P[i];
-		pout->done = &done;
-		pout->requests = &requests; 
-		
-		thr_id = pthread_create(&p_thread, NULL, minArray, pout);
-		
-		if(thr_id == EAGAIN) printf("NOT ENOUGH RESOURCES AVAILABLE FOR THREAD CREATE\n");
-		if(thr_id == EINVAL) printf("VALUE GIVE BY ATTR IS INVALID\n");
-		if(thr_id == EPERM) printf("CALLER DOES NOT HAVE PERMISSION TO CREATE THREADS\n");	
+	//printf("THREAD ID %d \n", id);
 
-		data *sout = malloc(sizeof(data));
-		if(sout==NULL){
-			printf("Sout Malloc Fail\n");		
-		}
-		sout->A = B;
-		sout->n =  n-i;
-		sout->id = 0;
-		sout->p = MAX_THREADS;
-		sout->out = &S[i];
- 		sout->done = NULL;
-		pout->requests = &requests;
-
-		minArray(sout);
-
-		rc = pthread_mutex_lock(&a_mutex);
-		if (rc) { /* an error has occurred */
-			printf("pthread_mutex_lock\n");
-			pthread_exit(NULL);
-		}
-		if(requests==0){
-			rc = pthread_cond_wait(&done, &a_mutex);
-		}
-		pthread_mutex_unlock(&a_mutex);
-		
+	for(i=start; i<end; i++){
+		int *B = malloc(n*sizeof(int));		
+		memcpy(B, A, n*sizeof(int));
+		P[i] = minArray(B, i+1);
+		B[i] = A[i];
+		S[i] = minArray(&B[i], n-i);
+		free(B);	
 	}
-	rc = pthread_cond_destroy(&done);
-	if (rc) { /* an error has occurred */
-			printf("PTHEARD COND DESTROY ERROR\n");
-
-	}
-	rc = pthread_mutex_destroy(&a_mutex);
-	if (rc) { /* an error has occurred */
-			printf("PTHEARD MUTEX DESTROY ERROR\n");
-
-	}
-	free(B);
-
+	return NULL;
 }
-//int *A, int n, int id, int p, int *out
-void* minArray(void* input){
-	int j, min, m;
-	pthread_cond_t *done;
-	int *A, n, id, p,  *out, *requests;
-	data *in = (data*)input;
 
-	A = in->A;
-	n = in->n;
-	id = in->id;
-	p = in->p;
-	out = in->out;
-	done = in->done;
-	requests = in->requests;
-	
+int minArray(int *A, int n){
+	int j, min, m;
 	min = INT_MAX;
 	m = ceil(log2(n));
 
 	if(n==1){
-		*out = A[0];
-		if(done) pthread_exit(NULL);
+		return A[0];
 	}
 	for(j=1;j<=m;j++){
 		if(n%2){
@@ -210,13 +167,7 @@ void* minArray(void* input){
 	}
 
 	if( min > A[0]) min = A[0];
-	*out = min;
-	free(input);
-	if(done){
-		int rc = pthread_cond_signal(done);
-		*requests += 1;
-		pthread_exit(NULL);
-	}
+	return min;
 }
 void minima(int *A, int n){
 	int p,l;
