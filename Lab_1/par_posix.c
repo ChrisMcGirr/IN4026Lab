@@ -7,14 +7,12 @@
 #include <pthread.h>
 #include <omp.h>
 #include <errno.h>
+#include "fileIO.h"
 
 //#define DEBUG
 
 #define MAX_THREADS 8
 
-int read_input(int* A, int n, char* file);
-int write_output(int* P, int* S, int n);
-int outputCheck(int *P, int *S, char* pfile, char* sfile, int n);
 void* psMin(void* args);
 int minArray(int *A, int n);
 void minima(int *A, int n);
@@ -71,14 +69,30 @@ int main(int argc, char **argv)
 		pthread_t thread_id[MAX_THREADS];
 		int k;
 		data thread_args[MAX_THREADS];
+		
+		int m = n/MAX_THREADS;
+		int rem = n%MAX_THREADS;
+		//printf("PARTS PER THREAD %d \n", m);
+		//printf("REMAINING %d \n", rem);
+		int allocated=0;
 
 		for(k=0; k<MAX_THREADS; k++){
 			thread_args[k].A = A;
 			thread_args[k].P = P;
 			thread_args[k].S = S;
 			thread_args[k].n = n;
-			thread_args[k].start = k*(n/MAX_THREADS);
-			thread_args[k].end = (k+1)*(n/MAX_THREADS);
+			if(rem){
+				thread_args[k].start = k*m+allocated;
+				thread_args[k].end = (k+1)*m+1+allocated;
+				//printf("THREAD %d has start %d and end %d\n", k, thread_args[k].start, thread_args[k].end);
+				rem--;
+				allocated++;
+			}
+			else{
+				thread_args[k].start = k*m+allocated;
+				thread_args[k].end = (k+1)*m+allocated;
+				//printf("THREAD %d has start %d and end %d\n", k, thread_args[k].start, thread_args[k].end);
+			}
 			thread_args[k].id = k;
 		}
 		
@@ -178,114 +192,4 @@ void minima(int *A, int n){
 	}
 
 }
-int outputCheck(int *P, int *S, char* pfile, char* sfile, int n){
 
-	int *P_ans = malloc(n*sizeof(int));
-	int *S_ans = malloc(n*sizeof(int));
-
-	int correct = 0;
-
-	read_input(P_ans, n, pfile);
-	read_input(S_ans, n, sfile);
-	
-	int i;
-	for(i=0; i<n; i++){
-		if(P[i] != P_ans[i]){
-			correct=1;		
-		}	
-	}
-	for(i=0; i<n; i++){
-		if(S[i] != S_ans[i]){
-			correct=1;		
-		}	
-	}
-
-	free(P_ans);
-	free(S_ans);
-	
-	return correct;
-}
-int read_input(int* A, int n, char* file) {
-
-	FILE *input;
-	char buf[20];
-
-	input =fopen(file,"r");
-
-	if (!input){
-		#ifdef DEBUG	
-		printf("Error File Does not Exist. \n");
-		#endif
-		return 1;
-	}
-
-	if(fgets(buf,20, input)!=NULL){
-		#ifdef DEBUG	
-		printf("%s",buf);
-		#endif	
-	}
-	else{
-		#ifdef DEBUG	
-		printf("First Line could not be read \n");
-		#endif
-		return 1;	
-	}
-	int i;
-	for(i = 0; i<n; i++){
-		if(fgets(buf,20, input)!=NULL){
-			A[i] = atoi(buf);
-			A[i] = A[i] - atoi(",");
-			#ifdef DEBUG	
-			printf("%d \n",A[i]);
-			#endif	
-		}
-	}
-
-	fclose(input);
-	return 0;
-}
-int write_output(int* P, int* S, int n){
-
-	FILE *output;
-	output = fopen("results/results_posix.txt", "w");
-	if(output==NULL){
-		#ifdef DEBUG	
-		printf("Failed to create the Output File \n");
-		#endif
-		return 1;
-	}
-	fprintf(output, "P = {");
-	
-	int i;
-	for(i=0; i<n; i++){
-		if(i==n-1){
-			fprintf(output, "%d", P[i]);		
-		}
-		else{
-			fprintf(output, "%d, ", P[i]);
-		}
-		if((i%16 == 0) && (i!=0)){
-			fprintf(output, "\n");
-		}
-		
-	}
-	fprintf(output, "} \n");
-
-	fprintf(output, "S = {");
-	for(i=0; i<n; i++){
-		if(i==n-1){
-			fprintf(output, "%d", S[i]);		
-		}
-		else{
-			fprintf(output, "%d, ", S[i]);
-		}
-		if((i%16 == 0) && (i!=0)){
-			fprintf(output, "\n");
-		}
-		
-	}
-	fprintf(output, "} \n");
-	fclose(output);
-
-	return 0;
-}
