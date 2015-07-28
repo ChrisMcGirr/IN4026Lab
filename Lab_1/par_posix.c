@@ -11,7 +11,10 @@
 
 //#define DEBUG
 
-#define MAX_THREADS 8
+pthread_barrier_t   barrier;
+
+int RUNS;
+int MAX_THREADS;
 
 void* psMin(void* args);
 int minArray(int *A, int n);
@@ -38,13 +41,16 @@ int main(int argc, char **argv)
 	int* P;
 	int* S;
 
-	if(argc < 5){
+
+	if(argc < 7){
 		printf("Missing Arguement Parameters\n");
-		printf("Format ./seq file_path array_size P_ans_path S_ans_Path\n");
+		printf("Format ./seq file_path array_size P_ans_path S_ans_Path RUNS THREADS\n");
 		return 1;
 	}
 
 	n = atoi(argv[2]);
+	RUNS = atoi(argv[5]);
+	MAX_THREADS = atoi(argv[6]);
 	A = malloc(n*sizeof(int));
 	P = malloc(n*sizeof(int));
 	S = malloc(n*sizeof(int));
@@ -64,7 +70,8 @@ int main(int argc, char **argv)
 	//Start of the Algorithm
 	int j;
 	double average;
-	for(j=0; j<5000; j++){
+	for(j=0; j<RUNS; j++){
+
 		start = omp_get_wtime();
 		pthread_t thread_id[MAX_THREADS];
 		int k;
@@ -75,6 +82,12 @@ int main(int argc, char **argv)
 		//printf("PARTS PER THREAD %d \n", m);
 		//printf("REMAINING %d \n", rem);
 		int allocated=0;
+		
+		pthread_attr_t attribute;
+		pthread_attr_init(&attribute);
+		pthread_attr_setdetachstate(&attribute, PTHREAD_CREATE_DETACHED);
+
+		pthread_barrier_init (&barrier, NULL, MAX_THREADS);
 
 		for(k=0; k<MAX_THREADS; k++){
 			thread_args[k].A = A;
@@ -95,21 +108,20 @@ int main(int argc, char **argv)
 			}
 			thread_args[k].id = k;
 		}
-		
+
 		for(k=0; k<MAX_THREADS-1; k++){
-			pthread_create(&thread_id[k], NULL, &psMin, &thread_args[k]);
+			pthread_create(&thread_id[k], &attribute, &psMin, &thread_args[k]);
 		}
 
 		psMin(&thread_args[MAX_THREADS-1]);
-		
-		for(k=0; k<MAX_THREADS-1; k++){
-			pthread_join(thread_id[k], NULL);
-		}
+
+		pthread_barrier_destroy(&barrier);
+
 		end = omp_get_wtime();
 		cpu_time_used = end-start;
-		if(j==0) average = cpu_time_used;
-		else	 average = (average+cpu_time_used)/2;
-	}	
+		average += cpu_time_used;
+	}
+	average = average/RUNS;	
 	//End of Algorithm
 	printf("%d 	%f	s \n",n,average);
 
@@ -150,7 +162,7 @@ void* psMin(void* args){
 	end = input->end;
 	id = input->id;
 
-	//printf("THREAD ID %d \n", id);
+	
 
 	for(i=start; i<end; i++){
 		int *B = malloc(n*sizeof(int));		
@@ -160,6 +172,8 @@ void* psMin(void* args){
 		S[i] = minArray(&B[i], n-i);
 		free(B);	
 	}
+	//printf("THREAD ID %d is waiting\n", id);
+	pthread_barrier_wait(&barrier);
 	return NULL;
 }
 

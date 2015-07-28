@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <math.h>
 #include "fileIO.h"
+#include <omp.h>
 
 //#define DEBUG
 
@@ -17,7 +18,7 @@ void minima(int *A, int n);
 
 int main(int argc, char **argv)
 {
-	clock_t start, end;
+	double start, end;
 	double cpu_time_used;
 	
 	int status;
@@ -25,14 +26,17 @@ int main(int argc, char **argv)
 	int* A;
 	int* P;
 	int* S;
+	
+	int RUNS;
 
-	if(argc < 5){
+	if(argc < 6){
 		printf("Missing Arguement Parameters\n");
-		printf("Format ./seq file_path array_size P_ans_path S_ans_Path\n");
+		printf("Format ./seq file_path array_size P_ans_path S_ans_Path RUNS\n");
 		return 1;
 	}
 
 	n = atoi(argv[2]);
+	RUNS = atoi(argv[5]);
 	A = malloc(n*sizeof(int));
 	P = malloc(n*sizeof(int));
 	S = malloc(n*sizeof(int));
@@ -53,14 +57,15 @@ int main(int argc, char **argv)
 
 	int j;
 	double average;
-	for(j=0; j<50000; j++){
-		start = clock();
+	for(j=0; j<RUNS; j++){
+		start = omp_get_wtime();
 		psMin(A, P, S, n);
-		end = clock();
-		cpu_time_used = ((double) (end - start)) / CLOCKS_PER_SEC;
-		if(j==0) average = cpu_time_used;
-		else	 average = (average+cpu_time_used)/2;
-	}	
+		end = omp_get_wtime();
+		cpu_time_used = end - start;
+		average += cpu_time_used;
+	}
+	average = average/RUNS;
+	
 	//End of Algorithm
 
 //	int temp = minArray(&A[3], 32-3);

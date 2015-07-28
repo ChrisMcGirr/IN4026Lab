@@ -7,6 +7,8 @@
 #include "fileIO.h"
 
 //#define DEBUG
+int RUNS;
+int MAX_THREADS;
 
 int minArray(int *A, int n);
 void psMin(int *A, int *P, int *S, int n);
@@ -22,14 +24,18 @@ int main(int argc, char **argv)
 	int* A;
 	int* P;
 	int* S;
+	
 
-	if(argc < 5){
+
+	if(argc < 7){
 		printf("Missing Arguement Parameters\n");
-		printf("Format ./seq file_path array_size P_ans_path S_ans_Path\n");
+		printf("Format ./seq file_path array_size P_ans_path S_ans_Path RUNS THREADS\n");
 		return 1;
 	}
 
 	n = atoi(argv[2]);
+	RUNS = atoi(argv[5]);
+	MAX_THREADS = atoi(argv[6]);
 	A = malloc(n*sizeof(int));
 	P = malloc(n*sizeof(int));
 	S = malloc(n*sizeof(int));
@@ -49,14 +55,15 @@ int main(int argc, char **argv)
 	//Start of the Algorithm
 	int j;
 	double average;
-	for(j=0; j<50000; j++){
+	for(j=0; j<RUNS; j++){
 		start = omp_get_wtime();
 		psMin(A, P, S, n);
 		end = omp_get_wtime();
 		cpu_time_used = end-start;
-		if(j==0) average = cpu_time_used;
-		else	 average = (average+cpu_time_used)/2;
-	}	
+		average += cpu_time_used;
+
+	}
+	average = average/RUNS;	
 	//End of Algorithm
 
 	printf("%d 	%f	s \n",n,average);
@@ -89,6 +96,8 @@ int main(int argc, char **argv)
 void psMin(int *A, int *P, int *S, int n){
 	int i;
 
+	omp_set_dynamic(0);     
+	omp_set_num_threads(MAX_THREADS);
 	#pragma omp parallel for
 	for(i=0; i<n; i++){
 		int *B = malloc(n*sizeof(int));		
