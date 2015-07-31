@@ -20,7 +20,7 @@ RESSEQ = results/batch_results_seq.txt
 RESOMP = results/batch_results_omp.txt
 RESPOS = results/batch_results_posix.txt
 MAXTHREADS = 8
-RUNS = 10000
+RUNS = 1
 
 all: seq omp posix batch
 
@@ -37,25 +37,25 @@ omp: par_omp.c
 #compiles and runs the Pthread version with n=32
 posix: par_posix.c
 	$(CC) $(POS).c fileIO.c fileIO.h -o $(POS) -lpthread -fopenmp -lm -g
-	./$(POS) input.txt 32 P_ans.txt S_ans.txt $(RUNS) $(MAXTHREADS)
+	./$(POS) input_A.txt input_B.txt 8 32 C_ans.txt $(RUNS) $(MAXTHREADS)
 
 #Runs all the versions in a batch format running through N=1 to 48	
 batch:
-	@echo "Starting Sequential Batch Run of Varying Input Sizes 16-48"	
+	@echo "Starting Sequential Batch Run of Varying Input Sizes 1-32"	
 	@echo "RESULT for Sequential Batch:" > $(RESSEQ)
 	@echo "Input N	 Execution Time	 Unit" > $(RESSEQ)
 	@for n in $(shell seq 1 32); do\
 		./$(SEQ) input_data/input_$$n.txt input_B.txt $$n 32 1 $(RUNS) >> $(RESSEQ); \
 	done
 	@echo "Finised Sequential Batch Run. Check RESULTS"
-	@echo "Starting OMP Batch Run of Varying Input Sizes 16-48"	
+	@echo "Starting OMP Batch Run of Varying Input Sizes 1-32"	
 	@echo "RESULT OMP Batch:" > $(RESOMP)
 	@echo "Input N	 Execution Time	 Unit" > $(RESOMP)
 	@for n in $(shell seq 1 32); do\
 			./$(OMP) input_data/input_$$n.txt input_B.txt $$n 32 1 $(RUNS) $(MAXTHREADS) >> $(RESOMP); \
 	done
 	@echo "Finised OMP Batch Run. Check RESULTS"
-#	@echo "Starting POSIX Batch Run of Varying Input Sizes 16-48"	
+#	@echo "Starting POSIX Batch Run of Varying Input Sizes 1-32"	
 #	@echo "RESULT POSIX Batch:" > $(RESPOS)
 #	@echo "Input N	 Execution Time	 Unit" > $(RESPOS)
 #	@for n in $(shell seq 1 32); do\
@@ -67,4 +67,5 @@ batch:
 
 #Cleans any results generate or binaries created
 clean:
-	rm results/results.txt results/results_omp.txt results/batch_results_seq.txt results/batch_results_omp.txt $(SEQ) $(OMP) $(POS) results/batch_results_posix.txt results/results_posix.txt output/*
+	rm results/results.txt results/results_omp.txt results/batch_results_seq.txt results/batch_results_omp.txt $(SEQ) $(OMP) $(POS) results/batch_results_posix.txt results/results_posix.txt
+

@@ -21,16 +21,39 @@
 #include <math.h>
 #include "fileIO.h"
 #include <omp.h>
+#include <pthread.h>
 
 #define CHUNKSIZE 4
 
-void simpleMerge(int *A, int *B, int *C, int n, int m);
+typedef struct args {
+	int *A;
+	int *B;
+	int *C;
+	int n;
+	int m;
+	int s1, e1, s2, e2;
+} args;
+
+typedef struct queue {
+	int queue1[2]; //queue for AinB
+	int queue2[2]; //queue for BinA
+} queue;
+
+void* simpleMerge(void* argv);
+void AinB(int *A, int *B, int *C, int n, int m, int start, int end);
+int checkQueue(args *input);
+void BinA(int *A, int *B, int *C, int n, int m, int start, int end);
 int rank(int a, int *B, int start, int end);
 int write_Array(int* A, int n);
 void generateInputs(int *A, int n);
 
+
 int RUNS;
 int MAX_THREADS;
+int *AA, *BB;
+pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
+queue jobs;
+
 
 /****************************************************************
 *
@@ -87,9 +110,7 @@ int main(int argc, char **argv)
 	status = read_input(A, n, argv[1]);
 
 	if(status){
-		#ifdef DEBUG	
 		printf("Failed to Read Input A \n");
-		#endif
 		return 1;
 	}
 
@@ -97,18 +118,25 @@ int main(int argc, char **argv)
 	status = read_input(B, m, argv[2]);
 
 	if(status){
-		#ifdef DEBUG	
 		printf("Failed to Read Input B \n");
-		#endif
 		return 1;
 	}
 	
+	AA = malloc(n*sizeof(int));
+	BB = malloc(m*sizeof(int));
+
 	//Start of testing of the algorithm
 	int j;
 	double average;
 	for(j=0; j<RUNS; j++){
 		start = omp_get_wtime(); //start timer
-		simpleMerge(A, B, C, n, m);
+
+/**************************************************************
+		//NEED TO ADD THREAD CREATION CODE!!
+**************************************************************/
+
+		//simpleMerge(A, B, C, n, m);
+
 		end = omp_get_wtime(); //end timer
 		cpu_time_used = end - start;
 		average += cpu_time_used;
@@ -135,12 +163,12 @@ int main(int argc, char **argv)
 		printf("Failed to Write Output \n");
 		return 1;
 	}
-	
-	//generateInputs(A, n);
 
 	free(A);
 	free(B);
 	free(C);
+	free(AA);
+	free(BB);
 	
 	
     	return 0;
@@ -162,27 +190,90 @@ int main(int argc, char **argv)
 *	Rank(A[i]:B) and vice versa. 
 *
 *****************************************************************/
-void simpleMerge(int *A, int *B, int *C, int n, int m){
-	int *AA = malloc(n*sizeof(int));
-	int *BB = malloc(m*sizeof(int));
-	int i;
-	int chunk = CHUNKSIZE;
+void* simpleMerge(void* argv){
+	args *input = (args*)argv;
+	int status;
 
-	omp_set_dynamic(0); //Makes sures the number of threads available is fixed    
-	omp_set_num_threads(MAX_THREADS); //Set thread number
-	#pragma omp parrallel shared(AA, BB, chunk) private(i)
-	{
-		#pragma omp for schedule(dynamic, chunk) nowait
-		for(i=0; i<n; i++){
+	AinB(input->A, input->B, input->C, input->n, input->m, input->s1, input->e1);
+	BinA(input->A, input->B, input->C, input->n, input->m, input->s2, input->e2);
+	
+	status = checkQueue(input);
+	if(status){
+		simpleMerge(input);	
+	}
+	
+}
+void AinB(int *A, int *B, int *C, int n, int m, int start, int end){
+	int i;
+	if(start!=end){	
+		for(i=start; i<end; i++){
 			AA[i] = rank(A[i]-1, B, 0, m-1);
 			C[i+AA[i]] = A[i];
 		}
-		#pragma omp for schedule(dynamic, chunk) nowait
-		for(i=0; i<m; i++){
+	}
+}
+void BinA(int *A, int *B, int *C, int n, int m, int start, int end){
+	int i;	
+	if(start!=end){	
+		for(i=start; i<end; i++){
 			BB[i] = rank(B[i], A, 0, n-1);
 			C[i+BB[i]] = B[i];
 		}
-	}	
+	}
+}
+int checkQueue(args *input){
+	int empty = 1;
+	int status = pthread_mutex_lock(&queue_lock);
+	if(status){
+		perror("pthread_mutex_lock");
+    		pthread_exit(NULL);	
+	}
+	printf("Job Queue 1 is %d to %d\n", jobs.queue1[0], jobs.queue1[1]);
+	//Check to see if there are any jobs left for AinB
+	if((jobs.queue1[0]) != (jobs.queue1[1])){
+		int n = jobs.queue1[1]-jobs.queue1[0];
+		int m = n%CHUNKSIZE;
+		if(m){
+			input->s1 = jobs.queue1[0];
+			input->e1 = jobs.queue1[0]+m;
+			jobs.queue1[0]+=m;
+		}
+		else{
+			input->s1 = jobs.queue1[0];
+			input->e1 = jobs.queue1[0]+CHUNKSIZE;
+			jobs.queue1[0]+=CHUNKSIZE;
+		} 
+		empty = 0;
+	}
+	else{
+		input->s1 = input->e1;	
+	}
+	printf("Job Queue 2 is %d to %d\n", jobs.queue2[0], jobs.queue2[1]);
+	//Check to see if there are any jobs left for BinA
+	if((jobs.queue2[0]) != (jobs.queue2[1])){
+		int n = jobs.queue2[1]-jobs.queue2[0];
+		int m = n%CHUNKSIZE;
+		if(m){
+			input->s2 = jobs.queue2[0];
+			input->e2 = jobs.queue2[0]+m;
+			jobs.queue2[0]+=m;
+		}
+		else{
+			input->s2 = jobs.queue2[0];
+			input->e2 = jobs.queue2[0]+CHUNKSIZE;
+			jobs.queue2[0]+=CHUNKSIZE;
+		} 
+		empty = 0;
+	}
+	else{
+		input->s2 = input->e2;	
+	}
+
+	status = pthread_mutex_unlock(&queue_lock);
+	if(status){
+		perror("pthread_mutex_unlock");
+   		pthread_exit(NULL);
+	}
 }
 /****************************************************************
 *
