@@ -222,17 +222,18 @@ void* psMin(void* args){
 	start = input->start;
 	end = input->end;
 	id = input->id;
-
+	int *B = malloc(n*sizeof(int));	
 	
 
 	for(i=start; i<end; i++){
-		int *B = malloc(n*sizeof(int));		
+			
 		memcpy(B, A, n*sizeof(int));
 		P[i] = minArray(B, i+1);
 		B[i] = A[i];
 		S[i] = minArray(&B[i], n-i);
-		free(B);	
+			
 	}
+	free(B);
 	pthread_barrier_wait(&barrier);
 	return NULL;
 }
