@@ -124,8 +124,7 @@ int write_output(int *A, int *B, int* C, int n, int m, char *name){
 	sprintf(value,"results_%d.txt", n);
 
 	//create output file for arrays
-	char file[64] = "output/";
-	strcat(file, name);
+	char file[32] = "output/";
 	strcat(file, value);
 	output = fopen(file, "w");
 	if(output==NULL){	

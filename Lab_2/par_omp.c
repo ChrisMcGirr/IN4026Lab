@@ -22,9 +22,15 @@
 #include "fileIO.h"
 #include <omp.h>
 
+#define CHUNKSIZE 4
 
 void simpleMerge(int *A, int *B, int *C, int n, int m);
 int rank(int a, int *B, int start, int end);
+int write_Array(int* A, int n);
+void generateInputs(int *A, int n);
+
+int RUNS;
+int MAX_THREADS;
 
 /****************************************************************
 *
@@ -43,20 +49,18 @@ int main(int argc, char **argv)
 	double start, end;
 	double cpu_time_used;
 	
-	char name[8] = "seq/";
-
+	char name[8] = "omp/";
+	
 	int status;
 	int n, m;
 	int* A;
 	int* B;
 	int* C;
 	
-	int RUNS;
-	
 	//Check if app was given enough input
-	if(argc < 7){
+	if(argc < 8){
 		printf("Missing Arguement Parameters\n");
-		printf("Format ./seq path_input_A path_input_B A_size B_size  C_ans_Path RUNS\n");
+		printf("Format ./seq path_input_A path_input_B A_size B_size  C_ans_Path RUNS Max_Threads\n");
 		return 1;
 	}
 	
@@ -64,6 +68,7 @@ int main(int argc, char **argv)
 	n = atoi(argv[3]);
 	m = atoi(argv[4]);
 	RUNS = atoi(argv[6]);
+	MAX_THREADS = atoi(argv[7]);
 	A = malloc(n*sizeof(int));
 	B = malloc(m*sizeof(int));
 	C = malloc((n+m)*sizeof(int));
@@ -130,9 +135,8 @@ int main(int argc, char **argv)
 		printf("Failed to Write Output \n");
 		return 1;
 	}
-
 	
-	//generateInputs(B, m);
+	//generateInputs(A, n);
 
 	free(A);
 	free(B);
@@ -162,13 +166,22 @@ void simpleMerge(int *A, int *B, int *C, int n, int m){
 	int *AA = malloc(n*sizeof(int));
 	int *BB = malloc(m*sizeof(int));
 	int i;
-	for(i=0; i<n; i++){
-		AA[i] = rank(A[i]-1, B, 0, m-1);
-		C[i+AA[i]] = A[i];
-	}
-	for(i=0; i<m; i++){
-		BB[i] = rank(B[i], A, 0, n-1);
-		C[i+BB[i]] = B[i];
+	int chunk = CHUNKSIZE;
+
+	omp_set_dynamic(0); //Makes sures the number of threads available is fixed    
+	omp_set_num_threads(MAX_THREADS); //Set thread number
+	#pragma omp parrallel shared(AA, BB, chunk) private(i)
+	{
+		#pragma omp for schedule(dynamic, chunk) nowait
+		for(i=0; i<n; i++){
+			AA[i] = rank(A[i]-1, B, 0, m-1);
+			C[i+AA[i]] = A[i];
+		}
+		#pragma omp for schedule(dynamic, chunk) nowait
+		for(i=0; i<m; i++){
+			BB[i] = rank(B[i], A, 0, n-1);
+			C[i+BB[i]] = B[i];
+		}
 	}	
 }
 /****************************************************************
@@ -212,5 +225,3 @@ int rank(int a, int *B, int start, int end){
 		}
 	}
 }
-
-
