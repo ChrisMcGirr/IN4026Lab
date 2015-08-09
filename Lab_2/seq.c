@@ -68,6 +68,7 @@ int main(int argc, char **argv)
 	B = malloc(m*sizeof(int));
 	C = malloc((n+m)*sizeof(int));
 
+
 	if(A==NULL){
 		printf("Failed to Allocate Memory for Input Array A");	
 	}
@@ -102,16 +103,19 @@ int main(int argc, char **argv)
 	int j;
 	double average;
 	for(j=0; j<RUNS; j++){
+		memset(C, 0, (n+m)*sizeof(int));
 		start = omp_get_wtime(); //start timer
 		simpleMerge(A, B, C, n, m);
 		end = omp_get_wtime(); //end timer
 		cpu_time_used = end - start;
 		average += cpu_time_used;
+		
 	}
 	average = average/RUNS; //Average the execution times
 
 	//print results to terminal
 	printf("%d 	%f	s \n",n,average);
+
 
 	if(atoi(argv[5])!=1)
 	{
@@ -131,12 +135,11 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	
-	//generateInputs(B, m);
 
 	free(A);
 	free(B);
 	free(C);
+
 	
 	
     	return 0;
@@ -164,12 +167,39 @@ void simpleMerge(int *A, int *B, int *C, int n, int m){
 	int i;
 	for(i=0; i<n; i++){
 		AA[i] = rank(A[i]-1, B, 0, m-1);
-		C[i+AA[i]] = A[i];
+		if(C[i+AA[i]] > 0){
+			if(C[i+AA[i]]< A[i]){
+				C[i+AA[i]+1] = A[i];
+			}
+			else{
+				int temp = C[i+AA[i]];
+				C[i+AA[i]] = A[i];
+				C[i+AA[i]+1] = temp;
+			
+			}		
+		}
+		else{
+			C[i+AA[i]] = A[i];		
+		}
 	}
 	for(i=0; i<m; i++){
 		BB[i] = rank(B[i], A, 0, n-1);
-		C[i+BB[i]] = B[i];
-	}	
+		if(C[i+BB[i]] > 0){
+			if(C[i+BB[i]]< B[i]){
+				C[i+BB[i]+1] = B[i];
+			}
+			else{
+				int temp = C[i+BB[i]];
+				C[i+BB[i]] = B[i];
+				C[i+BB[i]+1] = temp;
+			
+			}		
+		}
+		else{
+			C[i+BB[i]] = B[i];		
+		}
+	}
+	
 }
 /****************************************************************
 *

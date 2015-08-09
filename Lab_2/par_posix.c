@@ -25,6 +25,9 @@
 
 #define CHUNKSIZE 4
 
+//Make the barrier variable global to all threads
+pthread_barrier_t   barrier;
+
 typedef struct args {
 	int *A;
 	int *B;
@@ -32,6 +35,7 @@ typedef struct args {
 	int n;
 	int m;
 	int s1, e1, s2, e2;
+	int id;
 } args;
 
 typedef struct queue {
@@ -52,6 +56,7 @@ int RUNS;
 int MAX_THREADS;
 int *AA, *BB;
 pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t c_lock = PTHREAD_MUTEX_INITIALIZER;
 queue jobs;
 
 
@@ -69,10 +74,10 @@ queue jobs;
 *****************************************************************/
 int main(int argc, char **argv)
 {
-	double start, end;
+	struct timespec start, end;
 	double cpu_time_used;
 	
-	char name[8] = "omp/";
+	char name[8] = "posix/";
 	
 	int status;
 	int n, m;
@@ -129,17 +134,52 @@ int main(int argc, char **argv)
 	int j;
 	double average;
 	for(j=0; j<RUNS; j++){
-		start = omp_get_wtime(); //start timer
+		memset(C, 0, (n+m)*sizeof(int));
+		clock_gettime(CLOCK_MONOTONIC, &start); //start timer
+		
+		int rc;
+		pthread_t thread_id[MAX_THREADS];
+		pthread_attr_t attr[MAX_THREADS];
 
-/**************************************************************
-		//NEED TO ADD THREAD CREATION CODE!!
-**************************************************************/
+		int k;
+		for(k=0; k<MAX_THREADS; k++){
+			pthread_attr_init(&attr[k]);
+			pthread_attr_setdetachstate(&attr[k], PTHREAD_CREATE_DETACHED);
+		}
 
-		//simpleMerge(A, B, C, n, m);
+		//Initiate the barrier variable for threads
+		pthread_barrier_init (&barrier, NULL, MAX_THREADS);
 
-		end = omp_get_wtime(); //end timer
-		cpu_time_used = end - start;
+		args input[MAX_THREADS];
+		for(k=0; k<MAX_THREADS; k++){
+			input[k].A = A;
+			input[k].B = B;
+			input[k].C = C;
+			input[k].n = n;
+			input[k].m = m;
+			input[k].id = k;
+		}
+
+		
+		jobs.queue1[0] = 0;
+		jobs.queue1[1] = n;
+		jobs.queue2[0] = 0;
+		jobs.queue2[1] = m;
+		
+		for(k=1; k<MAX_THREADS; k++){
+			pthread_create(&thread_id[k], &attr[k], &simpleMerge, &input[k]);
+		}
+		simpleMerge(&input[0]);
+
+		clock_gettime(CLOCK_MONOTONIC, &end); //end timer
+		cpu_time_used = (end.tv_sec-start.tv_sec);
+		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
 		average += cpu_time_used;
+
+		//Release barrier resources
+		pthread_barrier_destroy(&barrier);
+		
+		
 	}
 	average = average/RUNS; //Average the execution times
 
@@ -156,7 +196,7 @@ int main(int argc, char **argv)
 			printf("Correct Answer\n");
 		}
 	}
-
+	
 	status = write_output(A, B, C, n, m, name);
 
 	if(status){	
@@ -164,12 +204,13 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+/* CAUSES MEMORY SEG FAULTS FOR SOME REASON
 	free(A);
 	free(B);
 	free(C);
 	free(AA);
 	free(BB);
-	
+*/	
 	
     	return 0;
 }
@@ -193,22 +234,56 @@ int main(int argc, char **argv)
 void* simpleMerge(void* argv){
 	args *input = (args*)argv;
 	int status;
-
-	AinB(input->A, input->B, input->C, input->n, input->m, input->s1, input->e1);
-	BinA(input->A, input->B, input->C, input->n, input->m, input->s2, input->e2);
-	
 	status = checkQueue(input);
+	//printf("Thread %d with status %d with S2 %d and E2 %d \n", input->id, status, input->s2, input->e2);
 	if(status){
+		AinB(input->A, input->B, input->C, input->n, input->m, input->s1, input->e1);
+		BinA(input->A, input->B, input->C, input->n, input->m, input->s2, input->e2);
 		simpleMerge(input);	
 	}
-	
+	else{	
+		pthread_barrier_wait(&barrier);
+		if(input->id){		
+			pthread_exit(NULL);
+		}
+	}
 }
+/****************************************************************
+*
+*	Function: simpleMerge
+*	Input:	int *A	Pointer to Input A
+*		int *B	Pointer to Input B
+		int *C	Pointer to the Merged Array C
+*		int n	Size of Array A
+*		int m	Size of Array B
+*
+*	Output: void
+*
+*	Description: Merges two sorted Arrays and A and B into a
+*	a single Array C of size n+m. The Merge is done by computing
+*	the rank of each element in the opposing Array. For example
+*	Rank(A[i]:B) and vice versa. 
+*
+*****************************************************************/
 void AinB(int *A, int *B, int *C, int n, int m, int start, int end){
 	int i;
 	if(start!=end){	
 		for(i=start; i<end; i++){
 			AA[i] = rank(A[i]-1, B, 0, m-1);
-			C[i+AA[i]] = A[i];
+			if(C[i+AA[i]] > 0){
+				if(C[i+AA[i]]<= A[i]){
+					C[i+AA[i]+1] = A[i];
+				}
+				else{
+					int temp = C[i+AA[i]];
+					C[i+AA[i]] = A[i];
+					C[i+AA[i]+1] = temp;
+			
+				}		
+			}
+			else{
+				C[i+AA[i]] = A[i];		
+			}
 		}
 	}
 }
@@ -217,20 +292,36 @@ void BinA(int *A, int *B, int *C, int n, int m, int start, int end){
 	if(start!=end){	
 		for(i=start; i<end; i++){
 			BB[i] = rank(B[i], A, 0, n-1);
-			C[i+BB[i]] = B[i];
+			if(C[i+BB[i]] > 0){			    	
+				if(C[i+BB[i]]<= B[i]){
+					C[i+BB[i]+1] = B[i];
+				}
+				else{
+					int temp = C[i+BB[i]];
+					C[i+BB[i]] = B[i];
+					C[i+BB[i]+1] = temp;
+			
+				}
+			}
+			else{
+				C[i+BB[i]] = B[i];		
+			}
 		}
 	}
 }
 int checkQueue(args *input){
-	int empty = 1;
+	int empty = 2;
+
 	int status = pthread_mutex_lock(&queue_lock);
+
 	if(status){
-		perror("pthread_mutex_lock");
-    		pthread_exit(NULL);	
+		printf("ERROR in CheckQueue(): pthread_mutex_lock \n");	
 	}
-	printf("Job Queue 1 is %d to %d\n", jobs.queue1[0], jobs.queue1[1]);
+
 	//Check to see if there are any jobs left for AinB
-	if((jobs.queue1[0]) != (jobs.queue1[1])){
+	//printf("Thread ID %d \n", input->id);
+	//printf("S1 %d and E1 %d \n",jobs.queue1[0] , jobs.queue1[1]);
+	if((jobs.queue1[0]) < (jobs.queue1[1])){
 		int n = jobs.queue1[1]-jobs.queue1[0];
 		int m = n%CHUNKSIZE;
 		if(m){
@@ -243,14 +334,14 @@ int checkQueue(args *input){
 			input->e1 = jobs.queue1[0]+CHUNKSIZE;
 			jobs.queue1[0]+=CHUNKSIZE;
 		} 
-		empty = 0;
 	}
 	else{
-		input->s1 = input->e1;	
+		input->s1 = input->e1;
+		empty -= 1;	
 	}
-	printf("Job Queue 2 is %d to %d\n", jobs.queue2[0], jobs.queue2[1]);
 	//Check to see if there are any jobs left for BinA
-	if((jobs.queue2[0]) != (jobs.queue2[1])){
+	//printf("S2 %d and E2 %d \n\n",jobs.queue2[0] , jobs.queue2[1]);
+	if((jobs.queue2[0]) < (jobs.queue2[1])){
 		int n = jobs.queue2[1]-jobs.queue2[0];
 		int m = n%CHUNKSIZE;
 		if(m){
@@ -263,17 +354,17 @@ int checkQueue(args *input){
 			input->e2 = jobs.queue2[0]+CHUNKSIZE;
 			jobs.queue2[0]+=CHUNKSIZE;
 		} 
-		empty = 0;
 	}
 	else{
-		input->s2 = input->e2;	
+		input->s2 = input->e2;
+		empty -= 1;	
 	}
 
 	status = pthread_mutex_unlock(&queue_lock);
 	if(status){
-		perror("pthread_mutex_unlock");
-   		pthread_exit(NULL);
+		printf("ERROR in CheckQueue(): pthread_mutex_unlock \n");
 	}
+	return empty;
 }
 /****************************************************************
 *

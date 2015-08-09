@@ -27,7 +27,7 @@
 void simpleMerge(int *A, int *B, int *C, int n, int m);
 int rank(int a, int *B, int start, int end);
 int write_Array(int* A, int n);
-void generateInputs(int *A, int n);
+
 
 int RUNS;
 int MAX_THREADS;
@@ -107,6 +107,7 @@ int main(int argc, char **argv)
 	int j;
 	double average;
 	for(j=0; j<RUNS; j++){
+		memset(C, 0, (n+m)*sizeof(int));
 		start = omp_get_wtime(); //start timer
 		simpleMerge(A, B, C, n, m);
 		end = omp_get_wtime(); //end timer
@@ -136,11 +137,12 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	
-	//generateInputs(A, n);
+	generateInputs(A, n);
 
 	free(A);
 	free(B);
 	free(C);
+
 	
 	
     	return 0;
@@ -175,12 +177,38 @@ void simpleMerge(int *A, int *B, int *C, int n, int m){
 		#pragma omp for schedule(dynamic, chunk) nowait
 		for(i=0; i<n; i++){
 			AA[i] = rank(A[i]-1, B, 0, m-1);
-			C[i+AA[i]] = A[i];
+			if(C[i+AA[i]] > 0){
+				if(C[i+AA[i]]< A[i]){
+					C[i+AA[i]+1] = A[i];
+				}
+				else{
+					int temp = C[i+AA[i]];
+					C[i+AA[i]] = A[i];
+					C[i+AA[i]+1] = temp;
+			
+				}		
+			}
+			else{
+				C[i+AA[i]] = A[i];		
+			}
 		}
 		#pragma omp for schedule(dynamic, chunk) nowait
 		for(i=0; i<m; i++){
 			BB[i] = rank(B[i], A, 0, n-1);
-			C[i+BB[i]] = B[i];
+			if(C[i+BB[i]] > 0){
+				if(C[i+BB[i]]< B[i]){
+					C[i+BB[i]+1] = B[i];
+				}
+				else{
+					int temp = C[i+BB[i]];
+					C[i+BB[i]] = B[i];
+					C[i+BB[i]+1] = temp;
+			
+				}		
+			}
+			else{
+				C[i+BB[i]] = B[i];		
+			}
 		}
 	}	
 }
