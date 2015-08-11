@@ -27,7 +27,7 @@ all: seq omp posix batch
 #compiles and runs the sequential version with n=32
 seq: seq.c fileIO.c fileIO.h makefile
 	$(CC) $(SEQ).c fileIO.c fileIO.h -o $(SEQ) -lm -fopenmp
-	./$(SEQ) input.txt 16 ans.txt $(RUNS) 
+	./$(SEQ) input.txt 17 ans.txt $(RUNS) 
 
 #compiles and runs the OMP version with n=32
 omp: par_omp.c
