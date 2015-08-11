@@ -32,7 +32,7 @@ seq: seq.c fileIO.c fileIO.h makefile
 #compiles and runs the OMP version with n=32
 omp: par_omp.c
 	$(CC) $(OMP).c fileIO.c fileIO.h -o $(OMP) -fopenmp -lm
-	./$(OMP) input_A.txt input_B.txt 8 32 C_ans.txt $(RUNS) $(MAXTHREADS)
+	./$(OMP) input.txt 17 ans.txt $(RUNS) $(MAXTHREADS)
 
 #compiles and runs the Pthread version with n=32
 posix: par_posix.c
