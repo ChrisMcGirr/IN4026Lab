@@ -62,7 +62,7 @@ int main(int argc, char **argv)
 	}
 	
 	//Save args to memory and allocate memory for arrays
-	n = atoi(argv[2]);
+	n = atoi(argv[2])+1;
 	RUNS = atoi(argv[4]);
 	MAX_THREADS = atoi(argv[5]);
 	S = malloc(n*sizeof(int));
