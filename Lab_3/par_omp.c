@@ -21,7 +21,7 @@
 #include "fileIO.h"
 #include <omp.h>
 
-#define CHUNKSIZE 4
+#define CHUNKSIZE 256
 
 void nodeLength(int* S, int* R, int n);
 
@@ -42,7 +42,7 @@ int MAX_THREADS;
 *****************************************************************/
 int main(int argc, char **argv)
 {
-	double start, end;
+	struct timespec start, end;
 	double cpu_time_used;
 	
 	char name[8] = "omp/";
@@ -92,17 +92,25 @@ int main(int argc, char **argv)
 	double average;
 	for(j=0; j<RUNS; j++){
 		memset(R, 0, n*sizeof(int));
-		start = omp_get_wtime(); //start timer
+		
+		/*Start Timer*/
+		clock_gettime(CLOCK_MONOTONIC, &start); 
+
+		/*Start Algorithm*/
 		nodeLength(S, R, n);
-		end = omp_get_wtime(); //end timer
-		cpu_time_used = end - start;
+
+		/*End Timer*/
+		clock_gettime(CLOCK_MONOTONIC, &end); 
+
+		cpu_time_used = (end.tv_sec-start.tv_sec);
+		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
 		average += cpu_time_used;
 		
 	}
 	average = average/RUNS; //Average the execution times
 
 	//print results to terminal
-	printf("%d 	%f	s \n",n,average);
+	printf("%d 	%f	s \n",n-1,average);
 
 	if(atoi(argv[3])!=1)
 	{
@@ -116,7 +124,10 @@ int main(int argc, char **argv)
 	}
 	
 
-	status = write_output(S, R, n, name);
+	/*Save the Results if the output is less than 50 elements*/
+	if(n<=50){
+		status = write_output(S, R, n, name);
+	}
 
 	if(status){	
 		printf("Failed to Write Output \n");
@@ -146,8 +157,11 @@ void nodeLength(int* S, int* R, int n){
 	int *P = malloc(n*sizeof(int));	
 	int i;
 	int chunk = CHUNKSIZE;
+	if(n<50){
+		chunk = 4; /*For Small N*/
+	}
 
-	omp_set_dynamic(0); //Makes sures the number of threads available is fixed    
+	omp_set_dynamic(0); //Makes sure the number of threads available is fixed    
 	omp_set_num_threads(MAX_THREADS); //Set thread number
 
 	/*Copy Contents into working Array*/

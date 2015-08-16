@@ -119,11 +119,11 @@ int read_input(int* A, int n, char* file) {
 int write_output(int *S, int *R, int n, char *name){
 
 	FILE *output;
-	char value[16];
+	char value[32];
 	sprintf(value,"results_%d.txt", n);
 
 	//create output file for arrays
-	char file[64] = "output/";
+	char file[128] = "output/";
 	strcat(file, name);
 	strcat(file, value);
 	output = fopen(file, "w");
@@ -204,7 +204,7 @@ int write_Array(int* A, int n){
 	snprintf(name, sizeof(name), "input_data/input_%d.txt", n);
 	output = fopen(name, "w");
 	if(output==NULL){
-		printf("Failed to create the Output File \n");
+		printf("Failed to create the Input File \n");
 		return 1;
 	}
 	fprintf(output, "B = {\n");

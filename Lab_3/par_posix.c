@@ -1,16 +1,14 @@
 /******************************************************************
-*	IN4026 Lab C: List Ranking
+*	IN4026 Lab C: List Ranking (Pointer Jumping)
 *	Author: Christopher McGirr
 *	Student # 4415302
 *
 *	File: par_posix.c
-*	Description: The parallel version of the List Ranking
-*	algorthim using the PThread library. List Ranking computes
-*	the distance of a node in a tree to the final parent node
-*	which has no outgoing pointer.  
-*	The List Ranking is done by pointer doubling until the final 
-*	node 0 is is reached. The threads are set up such that each 
-*	thread grabs from the available queue of work. 
+*	Description: The PThread parallel version of the linked list 
+*	distance calculation. Takes an input array S of size n
+*	and attempts to find the distance of each node in S to 
+*	the final node 0. The solution is then saved in the output
+*	array R of size n.
 *
 ******************************************************************/
 
@@ -24,7 +22,7 @@
 #include <omp.h>
 #include <pthread.h>
 
-#define CHUNKSIZE 4
+#define CHUNKSIZE 256
 
 //Make the barrier variable global to all threads
 pthread_barrier_t   barrier;
@@ -46,7 +44,7 @@ typedef struct queue {
 void* nodeLength(void* argv);
 void* arrayInit(void* argv);
 int checkQueue(args *input);
-void generateArrays(void);
+void generateArrays(int *A);
 
 
 int RUNS;
@@ -136,6 +134,7 @@ int main(int argc, char **argv)
 		pthread_barrier_init (&barrier, NULL, MAX_THREADS);
 		pthread_barrier_init (&init, NULL, MAX_THREADS);
 
+		/*Setup variables to be passed to threads*/
 		args input[MAX_THREADS];
 		for(k=0; k<MAX_THREADS; k++){
 			input[k].S = S;
@@ -146,6 +145,7 @@ int main(int argc, char **argv)
 		}
 
 		/*Initialize the Array in Parrallel*/
+
 		jobs.queue1[0] = 0;
 		jobs.queue1[1] = n;
 		
@@ -155,6 +155,7 @@ int main(int argc, char **argv)
 		arrayInit(&input[0]);
 
 		/*Compute the Distance of each Node*/
+
 		jobs.queue1[0] = 0;
 		jobs.queue1[1] = n;
 		
@@ -177,7 +178,7 @@ int main(int argc, char **argv)
 	average = average/RUNS; //Average the execution times
 
 	//print results to terminal
-	printf("%d 	%f	s \n",n,average);
+	printf("%d 	%f	s \n",n-1,average);
 
 	if(atoi(argv[3])!=1)
 	{
@@ -190,8 +191,10 @@ int main(int argc, char **argv)
 		}
 	}
 	
-
-	status = write_output(S, R, n, name);
+	/*Save the Results if the output is less than 50 elements*/
+	if(n<=50){
+		status = write_output(S, R, n, name);
+	}
 
 	if(status){	
 		printf("Failed to Write Output \n");
@@ -199,7 +202,7 @@ int main(int argc, char **argv)
 	}
 	
 	/*Used to generate the input files for the batch run*/
-	generateArrays();
+	//generateArrays(S);
 
 	free(S);
 	free(R);
@@ -309,6 +312,14 @@ void* nodeLength(void* argv){
 *****************************************************************/
 int checkQueue(args *input){
 	int nempty = 1;
+	int chunk;
+
+	if( (input->n) <= 50){
+		chunk = 4; /*Used for small N*/
+	}
+	else{
+		chunk = CHUNKSIZE;	
+	}
 
 	int status = pthread_mutex_lock(&queue_lock);
 
@@ -316,9 +327,7 @@ int checkQueue(args *input){
 		printf("ERROR in CheckQueue(): pthread_mutex_lock \n");	
 	}
 
-	//Check to see if there are any jobs left
-	//printf("Thread ID %d \n", input->id);
-	//printf("S1 %d and E1 %d \n",jobs.queue1[0] , jobs.queue1[1]);
+	/*Check to see if there are any jobs left*/
 	if((jobs.queue1[0]) < (jobs.queue1[1])){
 		int n = jobs.queue1[1]-jobs.queue1[0];
 		int m = n%CHUNKSIZE;
@@ -329,8 +338,8 @@ int checkQueue(args *input){
 		}
 		else{
 			input->s1 = jobs.queue1[0];
-			input->e1 = jobs.queue1[0]+CHUNKSIZE;
-			jobs.queue1[0]+=CHUNKSIZE;
+			input->e1 = jobs.queue1[0]+chunk;
+			jobs.queue1[0]+=chunk;
 		} 
 	}
 	else{
@@ -344,16 +353,37 @@ int checkQueue(args *input){
 	}
 	return nempty;
 }
-void generateArrays(){
-	int i,j;
+/****************************************************************
+*
+*	Function: generateArrays
+*	Input:	int *A		Pointer to valid 16 length array
+*
+*	Output: void	
+*
+*	Description: Creates inputs for the algorithm of varying
+*	sizes from 4096 doubling the size each time by 2. Outputs
+*	them as text files to be read back by the algorithm.	
+*
+*****************************************************************/
+void generateArrays(int *A){
+	int i,j,k,m;
 	int *out;
 	int n=2048;
 
 	for(i=1; i<8; i++){
 		n = n*2;
 		out = malloc(n*sizeof(int));
-		for(j=0; j<n; j++){
-			out[i] = rand ();	
+		m = n/16;
+
+		for(j=0; j<m; j++){
+			for(k=0; k<16; k++){
+				if(A[k]){
+					out[k+16*j] = 16*j+A[k];
+				}
+				else{
+					out[k+16*j] = 0;
+				}
+			}
 		}
 		write_Array(out, n);
 		free(out);
