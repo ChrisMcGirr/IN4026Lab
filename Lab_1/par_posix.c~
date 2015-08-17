@@ -4,11 +4,10 @@
 *	Author: Christopher McGirr
 *	Student # 4415302
 *
-*	File: par_omp.c
+*	File: par_posix.c
 *	Description: The parallel version of the sequential algorithm
-*	using the OpenMP library. The algorithm has been parallized
-*	around the main loop for computing the prefix and suffix values
-*	as well as around the balanced tree minima function. 
+*	using the Pthread library. The algorithm has been parallized
+*	around the main loop for computing the prefix and suffix values.
 *
 ******************************************************************/
 
@@ -16,19 +15,34 @@
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
-#include <time.h>
 #include <omp.h>
 #include <math.h>
+#include <pthread.h>
+#include <omp.h>
+#include <errno.h>
 #include "fileIO.h"
 
-/*Parameters are given in Makefile*/
-int RUNS; /*Number of Runs of the algorithm*/
-int MAX_THREADS; /*Number of threads available*/
-int CHUNKSIZE = 256;
+//Make the barrier variable global to all threads
+pthread_barrier_t   barrier;
 
+//Parameters are given in Makefile
+int RUNS; //Number of Runs of the algorithm
+int MAX_THREADS; //Number of threads available
+
+void* psMin(void* args);
 int minArray(int *A, int n);
-void psMin(int *A, int *P, int *S, int n);
 void minima(int *A, int n);
+
+//Arguements to be passed to all threads
+typedef struct data {
+	int *A;
+	int *P;
+	int *S;
+	int n; //Size of the arrays
+	int start; //start of the loop
+	int end; //end of the loop
+	int id; //thread id
+} data;
 
 
 /****************************************************************
@@ -42,6 +56,7 @@ void minima(int *A, int n);
 *	Description: Runs the prefix and suffix algorithm multiple
 *	times averaging the results and printing them to terminal. 
 *
+*
 *****************************************************************/
 int main(int argc, char **argv)
 {
@@ -53,7 +68,7 @@ int main(int argc, char **argv)
 	int* A;
 	int* P;
 	int* S;
-	
+
 	//Check if app was given enough input
 	if(argc < 7){
 		printf("Missing Arguement Parameters\n");
@@ -81,7 +96,7 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	//Start of testing of the algorithm
+	//Start algorithm testing
 	int j;
 	double average;
 	for(j=0; j<RUNS; j++){
@@ -89,7 +104,64 @@ int main(int argc, char **argv)
 		/*Start Timer*/
 		clock_gettime(CLOCK_MONOTONIC, &start); 
 
-		psMin(A, P, S, n);
+		//setup the threads and args for threads
+		pthread_t thread_id[MAX_THREADS];
+		int k;
+		data thread_args[MAX_THREADS];
+		
+		//figure out the amount of work for each thread
+		int m = n/MAX_THREADS;
+		int rem = n%MAX_THREADS;
+		int allocated=0;
+
+		//Set the threads to Detached state so they release resources immediately
+		//when terminated
+		pthread_attr_t attribute;
+		pthread_attr_init(&attribute);
+		pthread_attr_setdetachstate(&attribute, PTHREAD_CREATE_DETACHED);
+		
+		//Make sure the number of barriers is correct in case of work is less than
+		//amount of threads available.
+		int numbarriers = MAX_THREADS;
+		if(m==0){
+			numbarriers = rem;
+		}
+		
+		//Initiate the barrier variable for threads
+		pthread_barrier_init (&barrier, NULL, numbarriers);
+
+		//Setup all the thread arguements with their respective workloads
+		for(k=0; k<MAX_THREADS; k++){
+			thread_args[k].A = A;
+			thread_args[k].P = P;
+			thread_args[k].S = S;
+			thread_args[k].n = n;
+			if(rem){
+				thread_args[k].start = k*m+allocated;
+				thread_args[k].end = (k+1)*m+1+allocated;
+				rem--;
+				allocated++;
+			}
+			else{
+				thread_args[k].start = k*m+allocated;
+				thread_args[k].end = (k+1)*m+allocated;
+				
+			}
+			thread_args[k].id = k;
+		}
+
+		//Create all the threads
+		for(k=1; k<MAX_THREADS; k++){
+			//Check to see if they have work
+			if(thread_args[k].start != thread_args[k].end )
+			pthread_create(&thread_id[k], &attribute, &psMin, &thread_args[k]);
+		}
+		
+		//Run main thread with arguements
+		psMin(&thread_args[0]);
+
+		//Release barrier resources
+		pthread_barrier_destroy(&barrier);
 
 		/*Stop Timer*/
 		clock_gettime(CLOCK_MONOTONIC, &end);
@@ -97,11 +169,10 @@ int main(int argc, char **argv)
 		cpu_time_used = (end.tv_sec-start.tv_sec);
 		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
 		average += cpu_time_used;
-
 	}
-	average = average/RUNS;	//Average the execution times
-
-	//print results to terminal
+	average = average/RUNS;	//Find average execution time
+	
+	//Print the results	
 	printf("%d 	%f	s \n",n,average);
 
 	//Check to see if answer is correct if told to do so in the input args
@@ -114,8 +185,9 @@ int main(int argc, char **argv)
 		else{
 			printf("Correct Answer\n");
 		}
-	}
 
+	}
+	/*Output Results if N is small*/
 	if(n<=50){
 		status = write_output(P, S, n);
 		if(status){	
@@ -123,7 +195,7 @@ int main(int argc, char **argv)
 			return 1;
 		}
 	}
-
+	
 	//free the memory
 	free(P);
 	free(S);
@@ -134,45 +206,43 @@ int main(int argc, char **argv)
 /****************************************************************
 *
 *	Function: psMin
-*	Input:	int *A	Pointer to input array
-*		int *P	Pointer to Prefix array
-*		int *S	Pointer to Suffix array
-*		int n	Size of the arrays
+*	Input:	void* args	pointer to data struct
 *
-*	Output: void
+*	Output: void*
 *
-*	Description: Runs the prefix and suffix algorthim. Also
-*	sets the number of threads available to OpenMP. The value
-*	is given through the command line when the application is
-*	executed. Main Loop is parallelized and is up to the OpenMP
-*	compiler to schedule the work to the available threads.
-*	Each Loop iteration a copy of A is made to B which is local
-*	to each thread and so no mutexes are needed when writing.
+*	Description: Runs the prefix and suffix algorthim.Main Loop
+*	is parallelized and so each thread is given where is should
+*	start and end its work. These values are given through the
+*	void* args which is the pointer to the struct of type data
+*	which contains all the information. At the end the thread
+*	waits at the barrier until all the other threads who are 
+*	running are done
 *
 *****************************************************************/
-void psMin(int *A, int *P, int *S, int n){
+void* psMin(void* args){
 	int i;
-	int chunk = CHUNKSIZE;
-	if(n<=256){
-		chunk=8;
-	}
-
-	omp_set_dynamic(0); //Makes sures the number of threads available is fixed    
-	omp_set_num_threads(MAX_THREADS); //Set thread number
-
-	#pragma omp parallel shared(P,A,S) private(i)
-	{
-		#pragma omp for schedule(dynamic, chunk) nowait
-		for(i=0; i<n; i++){
-			int *B = malloc(n*sizeof(int));		
-			memcpy(B, A, n*sizeof(int));
-			P[i] = minArray(B, i+1); //find prefix 
-			B[i] = A[i]; //make sure the boundary is still correct
-			S[i] = minArray(&B[i], n-i); //find suffix
-			free(B);
-		}
-	}
+	int *A, *P, *S, n, end, start, id;
+	data *input = (data*)args;
+	A = input->A;
+	P = input->P;
+	S = input->S;
+	n = input->n;
+	start = input->start;
+	end = input->end;
+	id = input->id;
+	int *B = malloc(n*sizeof(int));	
 	
+
+	for(i=start; i<end; i++){
+		memcpy(B, A, n*sizeof(int));
+		P[i] = minArray(B, i+1);
+		B[i] = A[i];
+		S[i] = minArray(&B[i], n-i);
+			
+	}
+	free(B);
+	pthread_barrier_wait(&barrier);
+	return NULL;
 }
 /****************************************************************
 *
@@ -190,10 +260,9 @@ void psMin(int *A, int *P, int *S, int n){
 *****************************************************************/
 int minArray(int *A, int n){
 	int j, min, m;
-	int i;
 	min = INT_MAX;
 	m = ceil(log2(n));
-	
+
 	//Simple case
 	if(n==1){
 		return A[0];
@@ -232,18 +301,11 @@ int minArray(int *A, int n){
 *****************************************************************/
 void minima(int *A, int n){
 	int p,l;
-	int chunk = CHUNKSIZE;
-	if(n<=256){
-		chunk=8;
-	}
-	#pragma omp parallel shared(A) private(l, p)
-	{
-		#pragma omp for schedule(dynamic, chunk) nowait
-		for(l=0; l<n; l++){
-			p = 2*l;
-			if(A[p]>A[p+1]) A[l] = A[p+1];
-			else A[l] = A[p];
-		}
+	for(l=0; l<n; l++){
+		p = 2*l;
+		if(A[p]>A[p+1]) A[l] = A[p+1];
+		else A[l] = A[p];
 	}
 
 }
+

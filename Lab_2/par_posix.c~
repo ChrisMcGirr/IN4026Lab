@@ -23,8 +23,6 @@
 #include <omp.h>
 #include <pthread.h>
 
-#define CHUNKSIZE 4
-
 //Make the barrier variable global to all threads
 pthread_barrier_t   barrier;
 
@@ -55,6 +53,7 @@ void generateInputs(int *A, int n);
 int RUNS;
 int MAX_THREADS;
 int *AA, *BB;
+int CHUNKSIZE = 256;
 pthread_mutex_t queue_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t c_lock = PTHREAD_MUTEX_INITIALIZER;
 queue jobs;
@@ -95,6 +94,9 @@ int main(int argc, char **argv)
 	//Save args to memory and allocate memory for arrays
 	n = atoi(argv[3]);
 	m = atoi(argv[4]);
+	if((n<256)&&(m<256)){
+		CHUNKSIZE = 4;
+	}
 	RUNS = atoi(argv[6]);
 	MAX_THREADS = atoi(argv[7]);
 	A = malloc(n*sizeof(int));
@@ -134,7 +136,7 @@ int main(int argc, char **argv)
 	int j;
 	double average;
 	for(j=0; j<RUNS; j++){
-
+		memset(C, 0, (n+m)*sizeof(int));
 		clock_gettime(CLOCK_MONOTONIC, &start); //start timer
 		
 		int rc;
@@ -178,7 +180,7 @@ int main(int argc, char **argv)
 
 		//Release barrier resources
 		pthread_barrier_destroy(&barrier);
-		memset(C, 0, (n+m)*sizeof(int));
+		
 		
 	}
 	average = average/RUNS; //Average the execution times
@@ -197,20 +199,23 @@ int main(int argc, char **argv)
 		}
 	}
 	
-	status = write_output(A, B, C, n, m, name);
+	/*Print Output only if less than 50 elements*/	
+	if( (n<50) && (m<=50) ){
+		status = write_output(A, B, C, n, m, name);
+	}
 
 	if(status){	
 		printf("Failed to Write Output \n");
 		return 1;
 	}
 
-/* CAUSES MEMORY SEG FAULTS FOR SOME REASON
+	/* CAUSES MEMORY SEG FAULTS FOR SOME REASON */
 	free(A);
 	free(B);
 	free(C);
 	free(AA);
 	free(BB);
-*/	
+	
 	
     	return 0;
 }
@@ -235,7 +240,6 @@ void* simpleMerge(void* argv){
 	args *input = (args*)argv;
 	int status;
 	status = checkQueue(input);
-	//printf("Thread %d with status %d with S2 %d and E2 %d \n", input->id, status, input->s2, input->e2);
 	if(status){
 		AinB(input->A, input->B, input->C, input->n, input->m, input->s1, input->e1);
 		BinA(input->A, input->B, input->C, input->n, input->m, input->s2, input->e2);
@@ -250,19 +254,19 @@ void* simpleMerge(void* argv){
 }
 /****************************************************************
 *
-*	Function: simpleMerge
-*	Input:	int *A	Pointer to Input A
-*		int *B	Pointer to Input B
-		int *C	Pointer to the Merged Array C
-*		int n	Size of Array A
-*		int m	Size of Array B
+*	Function: AinB
+*	Input:	int *A		Pointer to Input A
+*		int *B		Pointer to Input B
+*		int *C		Pointer to the Merged Array C
+*		int n		Size of Array A
+*		int m		Size of Array B
+*		int start	Where it should start work
+*		int end		Where it should end work
 *
 *	Output: void
 *
-*	Description: Merges two sorted Arrays and A and B into a
-*	a single Array C of size n+m. The Merge is done by computing
-*	the rank of each element in the opposing Array. For example
-*	Rank(A[i]:B) and vice versa. 
+*	Description: Finds the position of an element in A in B
+*	for placement in array C
 *
 *****************************************************************/
 void AinB(int *A, int *B, int *C, int n, int m, int start, int end){
@@ -287,6 +291,23 @@ void AinB(int *A, int *B, int *C, int n, int m, int start, int end){
 		}
 	}
 }
+/****************************************************************
+*
+*	Function: BinA
+*	Input:	int *A		Pointer to Input A
+*		int *B		Pointer to Input B
+*		int *C		Pointer to the Merged Array C
+*		int n		Size of Array A
+*		int m		Size of Array B
+*		int start	Where it should start work
+*		int end		Where it should end work
+*
+*	Output: void
+*
+*	Description: Finds the position of an element in B in A
+*	for placement in array C
+*
+*****************************************************************/
 void BinA(int *A, int *B, int *C, int n, int m, int start, int end){
 	int i;	
 	if(start!=end){	
@@ -309,9 +330,22 @@ void BinA(int *A, int *B, int *C, int n, int m, int start, int end){
 		}
 	}
 }
+/****************************************************************
+*
+*	Function: checkQueue
+*	Input:	args *input	Pointer to thread input struct
+*
+*	Output: int		Returns 0 if no work available
+*				Returns >1 if there is work 
+*
+*	Description: Allocates jobs to the threads based on a chunk
+*	size. Returns 0 if there is no work available in both the
+*	queues. 
+*
+*****************************************************************/
 int checkQueue(args *input){
 	int empty = 2;
-
+	
 	int status = pthread_mutex_lock(&queue_lock);
 
 	if(status){
@@ -319,8 +353,6 @@ int checkQueue(args *input){
 	}
 
 	//Check to see if there are any jobs left for AinB
-	//printf("Thread ID %d \n", input->id);
-	//printf("S1 %d and E1 %d \n",jobs.queue1[0] , jobs.queue1[1]);
 	if((jobs.queue1[0]) < (jobs.queue1[1])){
 		int n = jobs.queue1[1]-jobs.queue1[0];
 		int m = n%CHUNKSIZE;
@@ -340,7 +372,6 @@ int checkQueue(args *input){
 		empty -= 1;	
 	}
 	//Check to see if there are any jobs left for BinA
-	//printf("S2 %d and E2 %d \n\n",jobs.queue2[0] , jobs.queue2[1]);
 	if((jobs.queue2[0]) < (jobs.queue2[1])){
 		int n = jobs.queue2[1]-jobs.queue2[0];
 		int m = n%CHUNKSIZE;

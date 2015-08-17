@@ -192,13 +192,26 @@ int write_output(int *A, int *B, int* C, int n, int m, char *name){
 *
 *	Output: void
 *
-*	Description: Generates input files to be used. 
+*	Description: Generates input files to be used. Of sizes 
+*	4096 to 262144
 *
 *****************************************************************/
-void generateInputs(int *A, int n){
-	int i;
-	for(i=1; i<=n; i++){
-		write_Array(A, i);
+void generateInputs(){
+	int i,j;
+	int n = 2048;
+	int *A;
+
+	/*Generate Seed*/
+ 	srand ( time(NULL) );
+
+	for(i=1; i<8; i++){
+		n = n*2;
+		A = malloc(n*sizeof(int));
+		for(j=0; j<n; j++){
+			A[j] = rand()%256; /*Range 0-255*/
+		}
+		write_Array(A, n);
+		free(A);
 	}
 
 }
@@ -216,7 +229,7 @@ void generateInputs(int *A, int n){
 int write_Array(int* A, int n){
 
 	FILE *output;
-	char name[32];
+	char name[64];
 	snprintf(name, sizeof(name), "input_data/input_%d.txt", n);
 	output = fopen(name, "w");
 	if(output==NULL){

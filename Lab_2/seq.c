@@ -40,7 +40,7 @@ int rank(int a, int *B, int start, int end);
 *****************************************************************/
 int main(int argc, char **argv)
 {
-	double start, end;
+	struct timespec start, end;
 	double cpu_time_used;
 	
 	char name[8] = "seq/";
@@ -82,20 +82,16 @@ int main(int argc, char **argv)
 	//Read the input array from file and save to memory
 	status = read_input(A, n, argv[1]);
 
-	if(status){
-		#ifdef DEBUG	
+	if(status){	
 		printf("Failed to Read Input A \n");
-		#endif
 		return 1;
 	}
 
 	//Read the input array from file and save to memory
 	status = read_input(B, m, argv[2]);
 
-	if(status){
-		#ifdef DEBUG	
+	if(status){	
 		printf("Failed to Read Input B \n");
-		#endif
 		return 1;
 	}
 	
@@ -104,10 +100,17 @@ int main(int argc, char **argv)
 	double average;
 	for(j=0; j<RUNS; j++){
 		memset(C, 0, (n+m)*sizeof(int));
-		start = omp_get_wtime(); //start timer
+
+		/*Start Timer*/
+		clock_gettime(CLOCK_MONOTONIC, &start); 
+
 		simpleMerge(A, B, C, n, m);
-		end = omp_get_wtime(); //end timer
-		cpu_time_used = end - start;
+
+		/*Stop Timer*/
+		clock_gettime(CLOCK_MONOTONIC, &end);
+
+		cpu_time_used = (end.tv_sec-start.tv_sec);
+		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
 		average += cpu_time_used;
 		
 	}
@@ -127,15 +130,18 @@ int main(int argc, char **argv)
 			printf("Correct Answer\n");
 		}
 	}
-
-	status = write_output(A, B, C, n, m, name);
+	
+	/*Print Output only if less than 50 elements*/	
+	if( (n<50) && (m<=50) ){
+		status = write_output(A, B, C, n, m, name);
+	}
 
 	if(status){	
 		printf("Failed to Write Output \n");
 		return 1;
 	}
 
-
+	/*Free Allocted Memory*/
 	free(A);
 	free(B);
 	free(C);

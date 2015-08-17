@@ -154,7 +154,7 @@ void psMin(int *A, int *P, int *S, int n){
 	int i;
 	int chunk = CHUNKSIZE;
 	if(n<=256){
-		chunk=8;
+		chunk=4;
 	}
 
 	omp_set_dynamic(0); //Makes sures the number of threads available is fixed    
@@ -234,7 +234,7 @@ void minima(int *A, int n){
 	int p,l;
 	int chunk = CHUNKSIZE;
 	if(n<=256){
-		chunk=8;
+		chunk=4;
 	}
 	#pragma omp parallel shared(A) private(l, p)
 	{

@@ -80,7 +80,7 @@ int outputCheck(int *P, int *S, char* pfile, char* sfile, int n){
 int read_input(int* A, int n, char* file) {
 
 	FILE *input;
-	char buf[20];
+	char buf[128];
 	
 	input =fopen(file,"r");
 
@@ -91,7 +91,7 @@ int read_input(int* A, int n, char* file) {
 
 	//Get the first line of the file and discard it
 	if(fgets(buf,20, input)!=NULL){
-		printf("%s",buf);	
+		//printf("%s",buf);	
 	}
 	else{	
 		printf("First Line could not be read \n");
@@ -103,9 +103,6 @@ int read_input(int* A, int n, char* file) {
 		if(fgets(buf,20, input)!=NULL){
 			A[i] = atoi(buf);
 			A[i] = A[i] - atoi(",");
-			#ifdef DEBUG	
-			printf("%d \n",A[i]);
-			#endif	
 		}
 	}
 
@@ -175,4 +172,86 @@ int write_output(int* P, int* S, int n){
 	fclose(output);
 
 	return 0;
+}
+/****************************************************************
+*
+*	Function: generateArrays
+*	Input:	void
+*
+*	Output: void
+*
+*	Description: Generates random arrays used to be given as
+*	input to the algorithm. Only ran once to create the arrays
+*
+*****************************************************************/
+void generateArrays(){
+	int i;
+	int n=2048;
+	int *A;
+
+	//Generates arrays of size 1 to 48
+	//and saves them to file.
+	for(i=1; i<8; i++){
+		n=n*2;
+		A = malloc(n*sizeof(int));
+		randArray(A, n);
+		write_Array(A,n);
+		free(A);
+	}
+}
+/****************************************************************
+*
+*	Function: write_Array
+*	Input:	int *A	Pointer to input array
+*		int n	Size of the array
+*
+*	Output: void
+*
+*	Description: Writes a generated array to file. 
+*
+*****************************************************************/
+int write_Array(int* A, int n){
+
+	FILE *output;
+	char name[64];
+	snprintf(name, sizeof(name), "Input_Data/input_%d.txt", n);
+	output = fopen(name, "w");
+	if(output==NULL){
+		#ifdef DEBUG	
+		printf("Failed to create the Output File \n");
+		#endif
+		return 1;
+	}
+	fprintf(output, "P = {\n");
+	
+	int i;
+	for(i=0; i<n; i++){
+		fprintf(output, "%d,\n", A[i]);
+	}
+	fprintf(output, "};");
+	fclose(output);
+
+	return 0;
+}
+/****************************************************************
+*
+*	Function: randArray
+*	Input:	int *A	Pointer to input array
+*		int n	Size of the array
+*
+*	Output: void
+*
+*	Description: Generates a random array of size n with values
+*	from 0 to 255 and saves it to memory location of A which is
+*	given as input
+*
+*****************************************************************/
+void randArray(int *A, int n){
+	if(A==NULL){
+		printf("Failed to allocate RandArray\n");	
+	}
+	int i;	
+	for(i=0; i<n; i++){
+		A[i] = rand() % 256;
+	}
 }

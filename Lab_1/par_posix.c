@@ -1,4 +1,3 @@
-
 /******************************************************************
 *	IN4026 Lab A: Prefix and Suffix Minima
 *	Author: Christopher McGirr
@@ -60,7 +59,7 @@ typedef struct data {
 *****************************************************************/
 int main(int argc, char **argv)
 {
-	double start, end;
+	struct timespec start, end;
 	double cpu_time_used;
 	
 	int status;
@@ -101,7 +100,8 @@ int main(int argc, char **argv)
 	double average;
 	for(j=0; j<RUNS; j++){
 
-		start = omp_get_wtime(); //start timer
+		/*Start Timer*/
+		clock_gettime(CLOCK_MONOTONIC, &start); 
 
 		//setup the threads and args for threads
 		pthread_t thread_id[MAX_THREADS];
@@ -162,8 +162,11 @@ int main(int argc, char **argv)
 		//Release barrier resources
 		pthread_barrier_destroy(&barrier);
 
-		end = omp_get_wtime(); //end timer
-		cpu_time_used = end-start;
+		/*Stop Timer*/
+		clock_gettime(CLOCK_MONOTONIC, &end);
+
+		cpu_time_used = (end.tv_sec-start.tv_sec);
+		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
 		average += cpu_time_used;
 	}
 	average = average/RUNS;	//Find average execution time
@@ -181,6 +184,10 @@ int main(int argc, char **argv)
 		else{
 			printf("Correct Answer\n");
 		}
+
+	}
+	/*Output Results if N is small*/
+	if(n<=50){
 		status = write_output(P, S, n);
 		if(status){	
 			printf("Failed to Write Output \n");
@@ -226,7 +233,6 @@ void* psMin(void* args){
 	
 
 	for(i=start; i<end; i++){
-			
 		memcpy(B, A, n*sizeof(int));
 		P[i] = minArray(B, i+1);
 		B[i] = A[i];

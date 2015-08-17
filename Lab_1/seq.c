@@ -25,9 +25,6 @@
 
 int minArray(int *A, int n);
 void psMin(int *A, int *P, int *S, int n);
-void randArray(int *A, int n);
-int write_Array(int* A, int n);
-void generateArrays(void);
 void minima(int *A, int n);
 
 /****************************************************************
@@ -44,7 +41,7 @@ void minima(int *A, int n);
 *****************************************************************/
 int main(int argc, char **argv)
 {
-	double start, end;
+	struct timespec start, end;
 	double cpu_time_used;
 	
 	int status;
@@ -77,9 +74,7 @@ int main(int argc, char **argv)
 	status = read_input(A, n, argv[1]);
 
 	if(status){
-		#ifdef DEBUG	
 		printf("Failed to Read Input \n");
-		#endif
 		return 1;
 	}
 	
@@ -87,10 +82,16 @@ int main(int argc, char **argv)
 	int j;
 	double average;
 	for(j=0; j<RUNS; j++){
-		start = omp_get_wtime(); //start timer
+		/*Start Timer*/
+		clock_gettime(CLOCK_MONOTONIC, &start); 
+
 		psMin(A, P, S, n);
-		end = omp_get_wtime(); //end timer
-		cpu_time_used = end - start;
+
+		/*Stop Timer*/
+		clock_gettime(CLOCK_MONOTONIC, &end);
+
+		cpu_time_used = (end.tv_sec-start.tv_sec);
+		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
 		average += cpu_time_used;
 	}
 	average = average/RUNS; //Average the execution times
@@ -108,23 +109,25 @@ int main(int argc, char **argv)
 		else{
 			printf("Correct Answer\n");
 		}
-		status = write_output(P, S, n);
+	}
 
+	/*Output Results for small N*/
+	if(n<=50){
+		status = write_output(P, S, n);
 		if(status){
-			#ifdef DEBUG	
 			printf("Failed to Write Output \n");
-			#endif
 			return 1;
 		}
 	}
 
 
 
+	/*Free allocated memory*/
 	free(P);
 	free(S);
 	free(A);
 	
-	//Used to generate random data sets and save to disk as text files
+	/*Used to generate random data sets and save to disk as text files*/
 	//generateArrays();
 
     	return 0;
@@ -151,9 +154,9 @@ void psMin(int *A, int *P, int *S, int n){
 	int *B = malloc(n*sizeof(int));
 	for(i=0; i<n; i++){		
 		memcpy(B, A, n*sizeof(int));
-		P[i] = minArray(B, i+1); //find prefix min
-		B[i] = A[i]; //make sure the boundary is still correct
-		S[i] = minArray(&B[i], n-i); //find suffix min
+		P[i] = minArray(B, i+1); /*find prefix min*/
+		B[i] = A[i]; /*make sure the boundary is still correct*/
+		S[i] = minArray(&B[i], n-i); /*find suffix min*/
 	}
 	free(B);
 }
@@ -222,82 +225,4 @@ void minima(int *A, int n){
 	}
 
 }
-/****************************************************************
-*
-*	Function: generateArrays
-*	Input:	void
-*
-*	Output: void
-*
-*	Description: Generates random arrays used to be given as
-*	input to the algorithm. Only ran once to create the arrays
-*
-*****************************************************************/
-void generateArrays(){
-	int i;
-	//Generates arrays of size 1 to 48
-	//and saves them to file.
-	for(i=1; i<=48; i++){
-		int *A;
-		A = malloc(i*sizeof(int));
-		randArray(A, i);
-		write_Array(A,i);
-		free(A);
-	}
-}
-/****************************************************************
-*
-*	Function: write_Array
-*	Input:	int *A	Pointer to input array
-*		int n	Size of the array
-*
-*	Output: void
-*
-*	Description: Writes a generated array to file. 
-*
-*****************************************************************/
-int write_Array(int* A, int n){
 
-	FILE *output;
-	char name[16];
-	snprintf(name, sizeof(name), "Input_Data/input_%d.txt", n);
-	output = fopen(name, "w");
-	if(output==NULL){
-		#ifdef DEBUG	
-		printf("Failed to create the Output File \n");
-		#endif
-		return 1;
-	}
-	fprintf(output, "P = {\n");
-	
-	int i;
-	for(i=0; i<n; i++){
-		fprintf(output, "%d,\n", A[i]);
-	}
-	fprintf(output, "};");
-	fclose(output);
-
-	return 0;
-}
-/****************************************************************
-*
-*	Function: randArray
-*	Input:	int *A	Pointer to input array
-*		int n	Size of the array
-*
-*	Output: void
-*
-*	Description: Generates a random array of size n with values
-*	from 0 to 255 and saves it to memory location of A which is
-*	given as input
-*
-*****************************************************************/
-void randArray(int *A, int n){
-	if(A==NULL){
-		printf("Failed to allocate RandArray\n");	
-	}
-	int i;	
-	for(i=0; i<n; i++){
-		A[i] = rand() % 256;
-	}
-}

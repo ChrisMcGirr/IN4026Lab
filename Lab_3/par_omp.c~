@@ -3,8 +3,8 @@
 *	Author: Christopher McGirr
 *	Student # 4415302
 *
-*	File: seq.c
-*	Description: The sequential version of the linked list 
+*	File: par_omp.c
+*	Description: The OpenMP parallel version of the linked list 
 *	distance calculation. Takes an input array S of size n
 *	and attempts to find the distance of each node in S to 
 *	the final node 0. The solution is then saved in the output
@@ -21,7 +21,11 @@
 #include "fileIO.h"
 #include <omp.h>
 
+#define CHUNKSIZE 256
+
 void nodeLength(int* S, int* R, int n);
+
+int MAX_THREADS;
 
 
 /****************************************************************
@@ -41,7 +45,7 @@ int main(int argc, char **argv)
 	double start, end;
 	double cpu_time_used;
 	
-	char name[8] = "seq/";
+	char name[8] = "omp/";
 
 	int status;
 	int n;
@@ -51,15 +55,16 @@ int main(int argc, char **argv)
 	int RUNS;
 	
 	//Check if app was given enough input
-	if(argc < 5){
+	if(argc < 6){
 		printf("Missing Arguement Parameters\n");
-		printf("Format ./seq path_input input_size ans_Path RUNS\n");
+		printf("Format ./seq path_input input_size ans_Path RUNS MAX_THREADS\n");
 		return 1;
 	}
 	
 	//Save args to memory and allocate memory for arrays
 	n = atoi(argv[2])+1;
 	RUNS = atoi(argv[4]);
+	MAX_THREADS = atoi(argv[5]);
 	S = malloc(n*sizeof(int));
 	R = malloc(n*sizeof(int));
 
@@ -87,10 +92,11 @@ int main(int argc, char **argv)
 	double average;
 	for(j=0; j<RUNS; j++){
 		memset(R, 0, n*sizeof(int));
-
+		
 		/*Start Timer*/
 		clock_gettime(CLOCK_MONOTONIC, &start); 
 
+		/*Start Algorithm*/
 		nodeLength(S, R, n);
 
 		/*End Timer*/
@@ -150,8 +156,16 @@ int main(int argc, char **argv)
 void nodeLength(int* S, int* R, int n){
 	int *P = malloc(n*sizeof(int));	
 	int i;
+	int chunk = CHUNKSIZE;
+	if(n<50){
+		chunk = 4; /*For Small N*/
+	}
+
+	omp_set_dynamic(0); //Makes sure the number of threads available is fixed    
+	omp_set_num_threads(MAX_THREADS); //Set thread number
 
 	/*Copy Contents into working Array*/
+	#pragma omp parrallel shared(S) private(i) for schedule(dynamic, chunk) nowait
 	for(i=0; i<n; i++){
 		P[i] = S[i];
 		if(S[i] > 0){
@@ -159,6 +173,7 @@ void nodeLength(int* S, int* R, int n){
 		}
 	}
 	/*Process each node sequential*/
+	#pragma omp parrallel shared(S, R, P) private(i) for schedule(dynamic, chunk)
 	for(i=0; i<n; i++){
 		while(P[i] > 0){	
 			R[i] = R[i]+R[P[i]];
@@ -167,6 +182,5 @@ void nodeLength(int* S, int* R, int n){
 	}
 
 	free(P);
-
 }
 

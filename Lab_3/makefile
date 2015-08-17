@@ -78,5 +78,5 @@ batch:
 
 #Cleans any results generate or binaries created
 clean:
-	rm results/results.txt results/results_omp.txt results/batch_results_seq.txt results/batch_results_omp.txt $(SEQ) $(OMP) $(POS) results/batch_results_posix.txt results/results_posix.txt o
+	rm results/* $(SEQ) $(OMP) $(POS)
 

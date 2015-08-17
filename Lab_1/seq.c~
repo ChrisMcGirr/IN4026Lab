@@ -1,35 +1,31 @@
-
 /******************************************************************
 *	IN4026 Lab A: Prefix and Suffix Minima
 *	Author: Christopher McGirr
 *	Student # 4415302
 *
-*	File: par_omp.c
-*	Description: The parallel version of the sequential algorithm
-*	using the OpenMP library. The algorithm has been parallized
-*	around the main loop for computing the prefix and suffix values
-*	as well as around the balanced tree minima function. 
+*	File: seq.c
+*	Description: The sequential version of the prefix and suffix
+*	minima algorithm. It takes as input an array A and computes the
+*	min of the prefix array and suffix array for a given index from
+*	1 to the array size. The results are saved to P and S respectively. 
+*	THe mimimum of the sub arrays are calculated using a balanced tree
+*	method. 
 *
 ******************************************************************/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <limits.h>
 #include <time.h>
-#include <omp.h>
+#include <limits.h>
 #include <math.h>
 #include "fileIO.h"
+#include <omp.h>
 
-/*Parameters are given in Makefile*/
-int RUNS; /*Number of Runs of the algorithm*/
-int MAX_THREADS; /*Number of threads available*/
-int CHUNKSIZE = 256;
 
 int minArray(int *A, int n);
 void psMin(int *A, int *P, int *S, int n);
 void minima(int *A, int n);
-
 
 /****************************************************************
 *
@@ -54,17 +50,18 @@ int main(int argc, char **argv)
 	int* P;
 	int* S;
 	
+	int RUNS;
+	
 	//Check if app was given enough input
-	if(argc < 7){
+	if(argc < 6){
 		printf("Missing Arguement Parameters\n");
-		printf("Format ./seq file_path array_size P_ans_path S_ans_Path RUNS THREADS\n");
+		printf("Format ./seq file_path array_size P_ans_path S_ans_Path RUNS\n");
 		return 1;
 	}
-
+	
 	//Save args to memory and allocate memory for arrays
 	n = atoi(argv[2]);
 	RUNS = atoi(argv[5]);
-	MAX_THREADS = atoi(argv[6]);
 	A = malloc(n*sizeof(int));
 	P = malloc(n*sizeof(int));
 	S = malloc(n*sizeof(int));
@@ -76,16 +73,15 @@ int main(int argc, char **argv)
 	//Read the input array from file and save to memory
 	status = read_input(A, n, argv[1]);
 
-	if(status){	
+	if(status){
 		printf("Failed to Read Input \n");
 		return 1;
 	}
-
+	
 	//Start of testing of the algorithm
 	int j;
 	double average;
 	for(j=0; j<RUNS; j++){
-
 		/*Start Timer*/
 		clock_gettime(CLOCK_MONOTONIC, &start); 
 
@@ -97,9 +93,8 @@ int main(int argc, char **argv)
 		cpu_time_used = (end.tv_sec-start.tv_sec);
 		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
 		average += cpu_time_used;
-
 	}
-	average = average/RUNS;	//Average the execution times
+	average = average/RUNS; //Average the execution times
 
 	//print results to terminal
 	printf("%d 	%f	s \n",n,average);
@@ -118,16 +113,20 @@ int main(int argc, char **argv)
 
 	if(n<=50){
 		status = write_output(P, S, n);
-		if(status){	
-			printf("Failed to Write Output \n");
-			return 1;
-		}
+	}
+	if(status){
+		printf("Failed to Write Output \n");
+		return 1;
 	}
 
-	//free the memory
+
+	/*Free allocated memory*/
 	free(P);
 	free(S);
 	free(A);
+	
+	/*Used to generate random data sets and save to disk as text files*/
+	//generateArrays();
 
     	return 0;
 }
@@ -142,37 +141,22 @@ int main(int argc, char **argv)
 *	Output: void
 *
 *	Description: Runs the prefix and suffix algorthim. Also
-*	sets the number of threads available to OpenMP. The value
-*	is given through the command line when the application is
-*	executed. Main Loop is parallelized and is up to the OpenMP
-*	compiler to schedule the work to the available threads.
-*	Each Loop iteration a copy of A is made to B which is local
-*	to each thread and so no mutexes are needed when writing.
+*	sets the number of threads available to OpenMP.
+*	Each Loop iteration a copy of A is made to B where the work
+*	is done on. As the minArray writes to B and saves the result
+*	to B[0] due to the balanced tree method.
 *
 *****************************************************************/
 void psMin(int *A, int *P, int *S, int n){
 	int i;
-	int chunk = CHUNKSIZE;
-	if(n<=256){
-		chunk=8;
+	int *B = malloc(n*sizeof(int));
+	for(i=0; i<n; i++){		
+		memcpy(B, A, n*sizeof(int));
+		P[i] = minArray(B, i+1); /*find prefix min*/
+		B[i] = A[i]; /*make sure the boundary is still correct*/
+		S[i] = minArray(&B[i], n-i); /*find suffix min*/
 	}
-
-	omp_set_dynamic(0); //Makes sures the number of threads available is fixed    
-	omp_set_num_threads(MAX_THREADS); //Set thread number
-
-	#pragma omp parallel shared(P,A,S) private(i)
-	{
-		#pragma omp for schedule(dynamic, chunk) nowait
-		for(i=0; i<n; i++){
-			int *B = malloc(n*sizeof(int));		
-			memcpy(B, A, n*sizeof(int));
-			P[i] = minArray(B, i+1); //find prefix 
-			B[i] = A[i]; //make sure the boundary is still correct
-			S[i] = minArray(&B[i], n-i); //find suffix
-			free(B);
-		}
-	}
-	
+	free(B);
 }
 /****************************************************************
 *
@@ -232,18 +216,11 @@ int minArray(int *A, int n){
 *****************************************************************/
 void minima(int *A, int n){
 	int p,l;
-	int chunk = CHUNKSIZE;
-	if(n<=256){
-		chunk=8;
-	}
-	#pragma omp parallel shared(A) private(l, p)
-	{
-		#pragma omp for schedule(dynamic, chunk) nowait
-		for(l=0; l<n; l++){
-			p = 2*l;
-			if(A[p]>A[p+1]) A[l] = A[p+1];
-			else A[l] = A[p];
-		}
+	for(l=0; l<n; l++){
+		p = 2*l;
+		if(A[p]>A[p+1]) A[l] = A[p+1];
+		else A[l] = A[p];
 	}
 
 }
+

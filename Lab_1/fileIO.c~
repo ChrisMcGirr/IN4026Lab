@@ -31,26 +31,34 @@
 *
 *
 *****************************************************************/
-int outputCheck(int *C,char* cfile, int n){
+int outputCheck(int *P, int *S, char* pfile, char* sfile, int n){
 
 	//need to allocate memory for the answers from file 
-	int *C_ans = malloc(n*sizeof(int));
+	int *P_ans = malloc(n*sizeof(int));
+	int *S_ans = malloc(n*sizeof(int));
 	
 	//Default return value is 0 (success)
 	int correct = 0;
 
-	read_input(C_ans, n, cfile);
+	read_input(P_ans, n, pfile);
+	read_input(S_ans, n, sfile);
 	
 	//Cycle through arrays P & S to check if the answers match
 	int i;
 	for(i=0; i<n; i++){
-		if(C[i] != C_ans[i]){
+		if(P[i] != P_ans[i]){
 			correct=1;		
 		}	
 	}
-
-	free(C_ans);
-
+	for(i=0; i<n; i++){
+		if(S[i] != S_ans[i]){
+			correct=1;		
+		}	
+	}
+	
+	free(P_ans);
+	free(S_ans);
+	
 	return correct;
 }
 /****************************************************************
@@ -72,7 +80,7 @@ int outputCheck(int *C,char* cfile, int n){
 int read_input(int* A, int n, char* file) {
 
 	FILE *input;
-	char buf[20];
+	char buf[64];
 	
 	input =fopen(file,"r");
 
@@ -83,7 +91,7 @@ int read_input(int* A, int n, char* file) {
 
 	//Get the first line of the file and discard it
 	if(fgets(buf,20, input)!=NULL){
-		//printf("Successfully Read Input\n");	
+		//printf("%s",buf);	
 	}
 	else{	
 		printf("First Line could not be read \n");
@@ -104,41 +112,51 @@ int read_input(int* A, int n, char* file) {
 /****************************************************************
 *
 *	Function: write_output
-*	Input:	int* S	Pointer to array A 
-*		int* R	Pointer to array B
-*		int n	Size of the array A
-		char *name Name of Program Running, e.g. seq
+*	Input:	int* P	Pointer to Prefix array 
+*		int* S	Pointer to Suffix array
+*		int n	Size of the arrays.
 *
 *	Output: int 0 if successful or 1 if failure
 *
-*	Description: Writes the output of the linked list along
-*	with the input.
+*	Description: Writes the prefix and suffix array results to
+*	file under the name file location "results/results.txt".
 *
 *
 *****************************************************************/
-int write_output(int *S, int *R, int n, char *name){
+int write_output(int* P, int* S, int n){
 
 	FILE *output;
-	char value[16];
-	sprintf(value,"results_%d.txt", n);
-
+	
 	//create output file for arrays
-	char file[128] = "output/";
-	strcat(file, name);
-	strcat(file, value);
-	output = fopen(file, "w");
+	output = fopen("results/results.txt", "w");
 	if(output==NULL){	
 		printf("Failed to create the Output File \n");
 		return 1;
 	}
 
 	//Start printing P to file
-	fprintf(output, "S = {");
+	fprintf(output, "P = {");
 	
 	int i;
 	for(i=0; i<n; i++){
 		if(i==n-1){
-			fprintf(output, "%d, ", S[i]);		
+			fprintf(output, "%d", P[i]);		
+		}
+		else{
+			fprintf(output, "%d, ", P[i]);
+		}
+		if((i%16 == 0) && (i!=0)){
+			fprintf(output, "\n");
+		}
+		
+	}
+	fprintf(output, "} \n");
+	
+	//Start printing S to same file
+	fprintf(output, "S = {");
+	for(i=0; i<n; i++){
+		if(i==n-1){
+			fprintf(output, "%d", S[i]);		
 		}
 		else{
 			fprintf(output, "%d, ", S[i]);
@@ -148,20 +166,7 @@ int write_output(int *S, int *R, int n, char *name){
 		}
 		
 	}
-	fprintf(output, "} \n\n");
-	fprintf(output, "R = {");
-	for(i=0; i<n; i++){
-		if(i==n-1){
-			fprintf(output, "%d, ", R[i]);		
-		}
-		else{
-			fprintf(output, "%d, ", R[i]);
-		}
-		if((i%16 == 0) && (i!=0)){
-			fprintf(output, "\n");
-		}
-		
-	}
+	fprintf(output, "} \n");
 	
 	//Finish writing and close file
 	fclose(output);
@@ -170,21 +175,29 @@ int write_output(int *S, int *R, int n, char *name){
 }
 /****************************************************************
 *
-*	Function: generateInputs
-*	Input:	int *A	Pointer to input array
-*		int n	Size of the array
+*	Function: generateArrays
+*	Input:	void
 *
 *	Output: void
 *
-*	Description: Generates input files to be used. 
+*	Description: Generates random arrays used to be given as
+*	input to the algorithm. Only ran once to create the arrays
 *
 *****************************************************************/
-void generateInputs(int *A, int n){
+void generateArrays(){
 	int i;
-	for(i=1; i<=n; i++){
-		write_Array(A, i);
-	}
+	int n=2048;
+	int *A;
 
+	//Generates arrays of size 1 to 48
+	//and saves them to file.
+	for(i=1; i<8; i++){
+		n=n*2;
+		A = malloc(n*sizeof(int));
+		randArray(A, n);
+		write_Array(A,n);
+		free(A);
+	}
 }
 /****************************************************************
 *
@@ -201,13 +214,15 @@ int write_Array(int* A, int n){
 
 	FILE *output;
 	char name[64];
-	snprintf(name, sizeof(name), "input_data/input_%d.txt", n);
+	snprintf(name, sizeof(name), "Input_Data/input_%d.txt", n);
 	output = fopen(name, "w");
 	if(output==NULL){
-		printf("Failed to create the Input File \n");
+		#ifdef DEBUG	
+		printf("Failed to create the Output File \n");
+		#endif
 		return 1;
 	}
-	fprintf(output, "B = {\n");
+	fprintf(output, "P = {\n");
 	
 	int i;
 	for(i=0; i<n; i++){
@@ -217,4 +232,26 @@ int write_Array(int* A, int n){
 	fclose(output);
 
 	return 0;
+}
+/****************************************************************
+*
+*	Function: randArray
+*	Input:	int *A	Pointer to input array
+*		int n	Size of the array
+*
+*	Output: void
+*
+*	Description: Generates a random array of size n with values
+*	from 0 to 255 and saves it to memory location of A which is
+*	given as input
+*
+*****************************************************************/
+void randArray(int *A, int n){
+	if(A==NULL){
+		printf("Failed to allocate RandArray\n");	
+	}
+	int i;	
+	for(i=0; i<n; i++){
+		A[i] = rand() % 256;
+	}
 }
