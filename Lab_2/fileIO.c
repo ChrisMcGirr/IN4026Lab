@@ -193,7 +193,8 @@ int write_output(int *A, int *B, int* C, int n, int m, char *name){
 *	Output: void
 *
 *	Description: Generates input files to be used. Of sizes 
-*	4096 to 262144
+*	4096 to 262144. Each is a simple sort array with increasing
+*	elements.
 *
 *****************************************************************/
 void generateInputs(){
@@ -207,8 +208,9 @@ void generateInputs(){
 	for(i=1; i<8; i++){
 		n = n*2;
 		A = malloc(n*sizeof(int));
-		for(j=0; j<n; j++){
-			A[j] = rand()%256; /*Range 0-255*/
+		A[0]= 0;
+		for(j=1; j<n; j++){
+			A[j] = A[j-1]+3; /*So A[j]<A[j+1]*/
 		}
 		write_Array(A, n);
 		free(A);
