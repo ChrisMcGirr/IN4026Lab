@@ -40,8 +40,7 @@ int rank(int a, int *B, int start, int end);
 *****************************************************************/
 int main(int argc, char **argv)
 {
-	struct timespec start, end;
-	double cpu_time_used;
+	struct timeval startt, endt, result;
 	
 	char name[8] = "seq/";
 
@@ -102,22 +101,22 @@ int main(int argc, char **argv)
 		memset(C, 0, (n+m)*sizeof(int));
 
 		/*Start Timer*/
-		clock_gettime(CLOCK_MONOTONIC, &start); 
+		result.tv_sec=0;
+		result.tv_usec=0;
+		gettimeofday (&startt, NULL); 
 
 		simpleMerge(A, B, C, n, m);
 
 		/*Stop Timer*/
-		clock_gettime(CLOCK_MONOTONIC, &end);
-
-		cpu_time_used = (end.tv_sec-start.tv_sec);
-		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
-		average += cpu_time_used;
+		gettimeofday (&endt, NULL);
+		result.tv_usec = (endt.tv_sec*1000000+endt.tv_usec) - (startt.tv_sec*1000000+startt.tv_usec);
+		average += result.tv_usec;
 		
 	}
 	average = average/RUNS; //Average the execution times
 
 	//print results to terminal
-	printf("%d 	%f	s \n",n,average);
+	printf("%d 	%f	us \n",n,average);
 
 
 	if(atoi(argv[5])!=1)

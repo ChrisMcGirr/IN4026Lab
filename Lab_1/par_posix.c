@@ -59,8 +59,7 @@ typedef struct data {
 *****************************************************************/
 int main(int argc, char **argv)
 {
-	struct timespec start, end;
-	double cpu_time_used;
+	struct timeval startt, endt, result;
 	
 	int status;
 	int n;
@@ -101,7 +100,9 @@ int main(int argc, char **argv)
 	for(j=0; j<RUNS; j++){
 
 		/*Start Timer*/
-		clock_gettime(CLOCK_MONOTONIC, &start); 
+		result.tv_sec=0;
+		result.tv_usec=0;
+		gettimeofday (&startt, NULL);
 
 		//setup the threads and args for threads
 		pthread_t thread_id[MAX_THREADS];
@@ -163,11 +164,9 @@ int main(int argc, char **argv)
 		pthread_barrier_destroy(&barrier);
 
 		/*Stop Timer*/
-		clock_gettime(CLOCK_MONOTONIC, &end);
-
-		cpu_time_used = (end.tv_sec-start.tv_sec);
-		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
-		average += cpu_time_used;
+		gettimeofday (&endt, NULL);
+		result.tv_usec = (endt.tv_sec*1000000+endt.tv_usec) - (startt.tv_sec*1000000+startt.tv_usec);
+		average += result.tv_usec;
 	}
 	average = average/RUNS;	//Find average execution time
 	

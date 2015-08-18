@@ -59,6 +59,7 @@ batch:
 		./$(OMP) input_data/input_$$n.txt $$n 1 $(RUNS) 2 >> $(RESOMP)_2.txt; \
 		./$(OMP) input_data/input_$$n.txt $$n 1 $(RUNS) 4 >> $(RESOMP)_4.txt; \
 		./$(OMP) input_data/input_$$n.txt $$n 1 $(RUNS) 8 >> $(RESOMP)_8.txt; \
+		#./$(OMP) input_data/input_$$n.txt $$n 1 $(RUNS) 16 >> $(RESOMP)_16.txt; \
 	done
 	@echo "Finised OMP Batch Run. Check RESULTS"
 	@echo "Starting POSIX Batch Run of Varying Input Sizes"	
@@ -78,5 +79,5 @@ batch:
 
 #Cleans any results generate or binaries created
 clean:
-	rm results/results.txt results/results_omp.txt results/batch_results_seq.txt results/batch_results_omp.txt $(SEQ) $(OMP) $(POS) results/batch_results_posix.txt results/results_posix.txt o
+	rm results/* $(SEQ) $(OMP) $(POS)
 

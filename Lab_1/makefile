@@ -59,6 +59,7 @@ batch:
 		./$(OMP) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 2 >> $(RESOMP)_2.txt; \
 		./$(OMP) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 4 >> $(RESOMP)_4.txt; \
 		./$(OMP) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 8 >> $(RESOMP)_8.txt; \
+		#./$(OMP) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 16 >> $(RESOMP)_16.txt; \
 	done
 	@echo "Finised OMP Batch Run. Check RESULTS"
 	@echo "Starting POSIX Batch Run of Varying Input Sizes 16-48"	
@@ -71,6 +72,7 @@ batch:
 		./$(POS) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 2 >> $(RESPOS)_2.txt; \
 		./$(POS) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 4 >> $(RESPOS)_4.txt; \
 		./$(POS) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 8 >> $(RESPOS)_8.txt; \
+		#./$(POS) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 16 >> $(RESPOS)_16.txt; \
 	done
 	@echo "Finised POSIX Batch Run. Check RESULTS"
 

@@ -45,8 +45,8 @@ void minima(int *A, int n);
 *****************************************************************/
 int main(int argc, char **argv)
 {
-	struct timespec start, end;
-	double cpu_time_used;
+	struct timeval startt, endt, result;
+
 	
 	int status;
 	int n;
@@ -87,22 +87,22 @@ int main(int argc, char **argv)
 	for(j=0; j<RUNS; j++){
 
 		/*Start Timer*/
-		clock_gettime(CLOCK_MONOTONIC, &start); 
+		result.tv_sec=0;
+		result.tv_usec=0;
+		gettimeofday (&startt, NULL);
 
 		psMin(A, P, S, n);
 
 		/*Stop Timer*/
-		clock_gettime(CLOCK_MONOTONIC, &end);
-
-		cpu_time_used = (end.tv_sec-start.tv_sec);
-		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
-		average += cpu_time_used;
+		gettimeofday (&endt, NULL);
+		result.tv_usec = (endt.tv_sec*1000000+endt.tv_usec) - (startt.tv_sec*1000000+startt.tv_usec);
+		average += result.tv_usec;
 
 	}
 	average = average/RUNS;	//Average the execution times
 
 	//print results to terminal
-	printf("%d 	%f	s \n",n,average);
+	printf("%d 	%f	us \n",n,average);
 
 	//Check to see if answer is correct if told to do so in the input args
 	if((atoi(argv[3])!=1) && (atoi(argv[4])!=1))

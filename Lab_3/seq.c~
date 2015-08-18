@@ -38,8 +38,7 @@ void nodeLength(int* S, int* R, int n);
 *****************************************************************/
 int main(int argc, char **argv)
 {
-	double start, end;
-	double cpu_time_used;
+	struct timeval startt, endt, result;
 	
 	char name[8] = "seq/";
 
@@ -89,22 +88,21 @@ int main(int argc, char **argv)
 		memset(R, 0, n*sizeof(int));
 
 		/*Start Timer*/
-		clock_gettime(CLOCK_MONOTONIC, &start); 
-
+		result.tv_sec=0;
+		result.tv_usec=0;
+		gettimeofday (&startt, NULL);
 		nodeLength(S, R, n);
 
-		/*End Timer*/
-		clock_gettime(CLOCK_MONOTONIC, &end); 
-
-		cpu_time_used = (end.tv_sec-start.tv_sec);
-		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
-		average += cpu_time_used;
+		/*Stop Timer*/
+		gettimeofday (&endt, NULL);
+		result.tv_usec = (endt.tv_sec*1000000+endt.tv_usec) - (startt.tv_sec*1000000+startt.tv_usec);
+		average += result.tv_usec;
 		
 	}
 	average = average/RUNS; //Average the execution times
 
 	//print results to terminal
-	printf("%d 	%f	s \n",n-1,average);
+	printf("%d 	%f	us \n",n-1,average);
 
 	if(atoi(argv[3])!=1)
 	{

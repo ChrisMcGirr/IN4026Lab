@@ -94,9 +94,12 @@ int main(int argc, char **argv)
 	//Save args to memory and allocate memory for arrays
 	n = atoi(argv[3]);
 	m = atoi(argv[4]);
+
+	/*If N is small use small Chunks*/
 	if((n<256)&&(m<256)){
 		CHUNKSIZE = 4;
 	}
+
 	RUNS = atoi(argv[6]);
 	MAX_THREADS = atoi(argv[7]);
 	A = malloc(n*sizeof(int));
