@@ -123,12 +123,17 @@ int read_input(int* A, int n, char* file) {
 *
 *
 *****************************************************************/
-int write_output(int* P, int* S, int n){
+int write_output(int* P, int* S, int n, char *name){
 
 	FILE *output;
-	
+	char file[64] = "output/results_";
+	char value[32];
+	sprintf(value, "%d.txt", n);
+	strcat(file, name);
+	strcat(file, value);
+
 	//create output file for arrays
-	output = fopen("results/results.txt", "w");
+	output = fopen(file, "w");
 	if(output==NULL){	
 		printf("Failed to create the Output File \n");
 		return 1;

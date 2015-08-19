@@ -19,7 +19,6 @@
 #include <limits.h>
 #include <math.h>
 #include "fileIO.h"
-#include <omp.h>
 #include <pthread.h>
 
 #define CHUNKSIZE 256
@@ -38,7 +37,8 @@ typedef struct args {
 } args;
 
 typedef struct queue {
-	int queue1[2]; 
+	int queue1[2];
+	int m; 
 } queue;
 
 void* nodeLength(void* argv);
@@ -151,6 +151,7 @@ int main(int argc, char **argv)
 
 		jobs.queue1[0] = 0;
 		jobs.queue1[1] = n;
+		jobs.m = ceil(log2(n)); /*Set the number of steps*/
 		
 		for(k=1; k<MAX_THREADS; k++){
 			pthread_create(&thread_id[k], &attr[k], &arrayInit, &input[k]);
@@ -205,7 +206,7 @@ int main(int argc, char **argv)
 	}
 	
 	/*Used to generate the input files for the batch run*/
-	//generateArrays(S);
+	generateArrays(S);
 
 	free(S);
 	free(R);
@@ -236,7 +237,7 @@ void* arrayInit(void* argv){
 	int status;
 	status = checkQueue(input);
 
-	if(status){
+	if(status>0){
 
 		/*Copy Contents into working Array and initalize R*/
 		for(i=(input->s1); i<(input->e1); i++){
@@ -281,23 +282,38 @@ void* nodeLength(void* argv){
 	int status;
 	status = checkQueue(input);
 	
-	if(status){
+	if(status>0){
 
-		/*Process each node sequential*/
+		/*Process each node */
 		for(i=(input->s1); i<(input->e1); i++){
-			while(P[i] > 0){	
+			if(P[i] > 0){	
 				R[i] = R[i]+R[P[i]];
 				P[i] = P[P[i]];
 			}	
 		}
 
+		/*Check to see if more work is left*/
 		nodeLength(input);	
 
 	}
 	else{	
+		/*Wait for other threads to finish step*/
 		pthread_barrier_wait(&barrier);
-		if(input->id){		
-			pthread_exit(NULL);
+
+		/*Finished all steps*/
+		if(status==-1){
+			if(input->id){		
+				pthread_exit(NULL);
+			}
+		}
+		else{
+			/*Reset the work queue*/
+			if(input->id == 0){ /*Only master touches it*/
+				jobs.m -= 1;		
+				jobs.queue1[0] = 0;
+				jobs.queue1[1] = input->n;
+			}
+			nodeLength(input);
 		}
 	}
 
@@ -349,6 +365,9 @@ int checkQueue(args *input){
 		input->s1 = input->e1;
 		nempty -= 1;	
 	}
+	if(jobs.m == 0){
+		nempty = -1;
+	}
 
 	status = pthread_mutex_unlock(&queue_lock);
 	if(status){
@@ -376,15 +395,15 @@ void generateArrays(int *A){
 	for(i=1; i<8; i++){
 		n = n*2;
 		out = malloc(n*sizeof(int));
-		m = n/16;
+		m = n/17;
 
 		for(j=0; j<m; j++){
-			for(k=0; k<16; k++){
+			for(k=0; k<17; k++){
 				if(A[k]){
-					out[k+16*j] = 16*j+A[k];
+					out[k+17*j] = 17*j+A[k];
 				}
 				else{
-					out[k+16*j] = 0;
+					out[k+17*j] = 0;
 				}
 			}
 		}

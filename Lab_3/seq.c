@@ -148,7 +148,8 @@ int main(int argc, char **argv)
 *****************************************************************/
 void nodeLength(int* S, int* R, int n){
 	int *P = malloc(n*sizeof(int));	
-	int i;
+	int i, j, m;
+	m = ceil(log2(n));
 
 	/*Copy Contents into working Array*/
 	for(i=0; i<n; i++){
@@ -158,11 +159,13 @@ void nodeLength(int* S, int* R, int n){
 		}
 	}
 	/*Process each node sequential*/
-	for(i=0; i<n; i++){
-		while(P[i] > 0){	
-			R[i] = R[i]+R[P[i]];
-			P[i] = P[P[i]];
-		}	
+	for(j=0; j<m; j++){
+		for(i=0; i<n; i++){
+			if(P[i] > 0){	
+				R[i] = R[i]+R[P[i]];
+				P[i] = P[P[i]];
+			}	
+		}
 	}
 
 	free(P);

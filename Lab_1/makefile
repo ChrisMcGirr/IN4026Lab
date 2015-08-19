@@ -48,7 +48,7 @@ batch:
 	@for n in 4096 8192 16384 32768 65536 131072 262144; do\
 		./$(SEQ) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) >> $(RESSEQ)_1.txt; \
 	done
-	@echo "Finised Sequential Batch Run. Check RESULTS"
+	@echo "Finised Sequential Batch Run. Check RESULTS"	
 	@echo "Starting OMP Batch Run of Varying Input Sizes 16-48"	
 	@for n in 1 2 4 8; do\
 		echo "RESULT OMP Batch for" $$n > $(RESOMP)_$$n.txt ; \
@@ -61,7 +61,7 @@ batch:
 		./$(OMP) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 8 >> $(RESOMP)_8.txt; \
 		#./$(OMP) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 16 >> $(RESOMP)_16.txt; \
 	done
-	@echo "Finised OMP Batch Run. Check RESULTS"
+	@echo "Finised OMP Batch Run. Check RESULTS"	
 	@echo "Starting POSIX Batch Run of Varying Input Sizes 16-48"	
 	@for n in 1 2 4 8; do\
 		echo "RESULT POSIX Batch for" $$n > $(RESPOS)_$$n.txt ; \

@@ -47,7 +47,8 @@ int main(int argc, char **argv)
 {
 	struct timeval startt, endt, result;
 
-	
+	char name[16] = "omp";
+
 	int status;
 	int n;
 	int* A;
@@ -117,7 +118,7 @@ int main(int argc, char **argv)
 	}
 
 	if(n<=50){
-		status = write_output(P, S, n);
+		status = write_output(P, S, n, name);
 		if(status){	
 			printf("Failed to Write Output \n");
 			return 1;

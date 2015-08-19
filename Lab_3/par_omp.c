@@ -91,13 +91,12 @@ int main(int argc, char **argv)
 	double average;
 	for(j=0; j<RUNS; j++){
 		memset(R, 0, n*sizeof(int));
+
 		
 		/*Start Timer*/
 		result.tv_sec=0;
 		result.tv_usec=0;
 		gettimeofday (&startt, NULL);
-
-		nodeLength(S, R, n);
 
 		/*Start Algorithm*/
 		nodeLength(S, R, n);
@@ -155,9 +154,13 @@ int main(int argc, char **argv)
 *
 *****************************************************************/
 void nodeLength(int* S, int* R, int n){
-	int *P = malloc(n*sizeof(int));	
-	int i;
+	int *P = malloc(n*sizeof(int));
+	int *P_temp = malloc(n*sizeof(int));	
+	int *R_temp = malloc(n*sizeof(int));		
+	int i,j, m;
 	int chunk = CHUNKSIZE;
+	m = ceil(log2(n));
+
 	if(n<50){
 		chunk = 4; /*For Small N*/
 	}
@@ -166,22 +169,39 @@ void nodeLength(int* S, int* R, int n){
 	omp_set_num_threads(MAX_THREADS); //Set thread number
 
 	/*Copy Contents into working Array*/
-	#pragma omp parrallel shared(S) private(i) for schedule(dynamic, chunk) nowait
+	#pragma omp parallel for schedule(dynamic, chunk) shared(S) private(i) num_threads(MAX_THREADS)
 	for(i=0; i<n; i++){
 		P[i] = S[i];
 		if(S[i] > 0){
 			R[i] = 1;
+			R_temp[i] = 1;
+		}
+		else{
+			R[i] = 0;
+			R_temp[i] = 0;
 		}
 	}
-	/*Process each node sequential*/
-	#pragma omp parrallel shared(S, R, P) private(i) for schedule(dynamic, chunk)
-	for(i=0; i<n; i++){
-		while(P[i] > 0){	
-			R[i] = R[i]+R[P[i]];
-			P[i] = P[P[i]];
-		}	
-	}
 
+	/*Process each node step by step*/
+	for(j=0; j<m; j++){
+		/*Process each node and save in Temp*/
+		#pragma omp parallel for schedule(dynamic, chunk) shared(R, P, R_temp, P_temp) private(i) num_threads(MAX_THREADS)
+		for(i=0; i<n; i++){
+			if(P[i]>0){
+				R_temp[i] = R[i]+R[P[i]];			
+				P_temp[i] = P[P[i]];
+			}
+		}
+		/*Copy the temp variables back to original array*/
+		#pragma omp parallel for schedule(dynamic, chunk) shared(R, P, R_temp, P_temp) private(i) num_threads(MAX_THREADS)
+		for(i=0; i<n; i++){
+			R[i] = R_temp[i];
+			P[i] = P_temp[i];		
+		}
+	}
+	
+	free(P_temp);
+	free(R_temp);
 	free(P);
 }
 

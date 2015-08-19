@@ -43,6 +43,8 @@ int main(int argc, char **argv)
 {
 	struct timeval startt, endt, result;
 	double cpu_time_used;
+
+	char name[16] = "seq";
 	
 	int status;
 	int n;
@@ -97,7 +99,7 @@ int main(int argc, char **argv)
 	average = average/RUNS; //Average the execution times
 
 	//print results to terminal
-	printf("%d 	%f	s \n",n,average);
+	printf("%d 	%f	us \n",n,average);
 
 	//Check to see if answer is correct if told to do so in the input args
 	if((atoi(argv[3])!=1) && (atoi(argv[4])!=1))

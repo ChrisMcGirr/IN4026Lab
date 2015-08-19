@@ -73,8 +73,7 @@ queue jobs;
 *****************************************************************/
 int main(int argc, char **argv)
 {
-	struct timespec start, end;
-	double cpu_time_used;
+	struct timeval startt, endt, result;
 	
 	char name[8] = "posix/";
 	
@@ -140,7 +139,11 @@ int main(int argc, char **argv)
 	double average;
 	for(j=0; j<RUNS; j++){
 		memset(C, 0, (n+m)*sizeof(int));
-		clock_gettime(CLOCK_MONOTONIC, &start); //start timer
+
+		/*Start Timer*/
+		result.tv_sec=0;
+		result.tv_usec=0;
+		gettimeofday (&startt, NULL);
 		
 		int rc;
 		pthread_t thread_id[MAX_THREADS];
@@ -176,10 +179,10 @@ int main(int argc, char **argv)
 		}
 		simpleMerge(&input[0]);
 
-		clock_gettime(CLOCK_MONOTONIC, &end); //end timer
-		cpu_time_used = (end.tv_sec-start.tv_sec);
-		cpu_time_used += (end.tv_nsec-start.tv_nsec)/1000000000.0;
-		average += cpu_time_used;
+		/*Stop Timer*/
+		gettimeofday (&endt, NULL);
+		result.tv_usec = (endt.tv_sec*1000000+endt.tv_usec) - (startt.tv_sec*1000000+startt.tv_usec);
+		average += result.tv_usec;
 
 		//Release barrier resources
 		pthread_barrier_destroy(&barrier);

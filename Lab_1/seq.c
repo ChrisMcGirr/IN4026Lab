@@ -43,6 +43,8 @@ int main(int argc, char **argv)
 {
 	struct timeval startt, endt, result;
 	double cpu_time_used;
+
+	char name[16] = "seq";
 	
 	int status;
 	int n;
@@ -113,7 +115,7 @@ int main(int argc, char **argv)
 
 	/*Output Results for small N*/
 	if(n<=50){
-		status = write_output(P, S, n);
+		status = write_output(P, S, n, name);
 		if(status){
 			printf("Failed to Write Output \n");
 			return 1;

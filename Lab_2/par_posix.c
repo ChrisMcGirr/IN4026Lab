@@ -3,13 +3,12 @@
 *	Author: Christopher McGirr
 *	Student # 4415302
 *
-*	File: seq.c
-*	Description: The sequential version of the prefix and suffix
-*	minima algorithm. It takes as input an array A and computes the
-*	min of the prefix array and suffix array for a given index from
-*	1 to the array size. The results are saved to P and S respectively. 
-*	THe mimimum of the sub arrays are calculated using a balanced tree
-*	method. 
+*	File: par_posix.c
+*	Description: The parallel PThread version of simple merge takes
+*	two sorted arrays A of size N and B of size of M as inputs 
+*	and creates another sorted array C or size N+M as output. 
+*	Uses the rank function to determine the index of an element
+*	of A in B and vice versa.
 *
 ******************************************************************/
 

@@ -20,7 +20,7 @@ RESSEQ = results/batch_results_seq
 RESOMP = results/batch_results_omp
 RESPOS = results/batch_results_posix
 MAXTHREADS = 8
-RUNS = 10
+RUNS = 1
 
 all: seq omp posix batch
 
@@ -41,7 +41,7 @@ posix: par_posix.c
 
 #Runs all the versions in a batch format running through N=1 to 48	
 batch:
-	rm results/*
+	#rm results/*
 	@echo "Starting Sequential Batch Run of Varying Input Sizes 1-32"	
 	@echo "RESULT for Sequential Batch:" > $(RESSEQ)_1.txt
 	@echo "Input N	 Execution Time	 Unit" > $(RESSEQ)_1.txt
@@ -72,7 +72,7 @@ batch:
 		./$(POS) input_data/input_$$n.txt input_262144.txt $$n 262144 1 $(RUNS) 2 >> $(RESPOS)_2.txt; \
 		./$(POS) input_data/input_$$n.txt input_262144.txt $$n 262144 1 $(RUNS) 4 >> $(RESPOS)_4.txt; \
 		./$(POS) input_data/input_$$n.txt input_262144.txt $$n 262144 1 $(RUNS) 8 >> $(RESPOS)_8.txt; \
-		./$(POS) input_data/input_$$n.txt input_262144.txt $$n 262144 1 $(RUNS) 16 >> $(RESPOS)_16.txt; \
+		#./$(POS) input_data/input_$$n.txt input_262144.txt $$n 262144 1 $(RUNS) 16 >> $(RESPOS)_16.txt; \
 	done
 	@echo "Finised POSIX Batch Run. Check RESULTS"
 

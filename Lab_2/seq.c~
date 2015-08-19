@@ -116,7 +116,7 @@ int main(int argc, char **argv)
 	average = average/RUNS; //Average the execution times
 
 	//print results to terminal
-	printf("%d 	%f	s \n",n,average);
+	printf("%d 	%f	us \n",n,average);
 
 
 	if(atoi(argv[5])!=1)
