@@ -20,7 +20,7 @@ RESSEQ = results/batch_results_seq
 RESOMP = results/batch_results_omp
 RESPOS = results/batch_results_posix
 MAXTHREADS = 8
-RUNS = 10
+RUNS = 1
 
 all: seq omp posix batch
 
@@ -31,7 +31,7 @@ seq: seq.c fileIO.c fileIO.h makefile
 
 #compiles and runs the OMP version with n=32
 omp: par_omp.c
-	$(CC) $(OMP).c fileIO.c fileIO.h -o $(OMP) -fopenmp -lm
+	$(CC) $(OMP).c fileIO.c fileIO.h -o $(OMP) -fopenmp -lm -g
 	./$(OMP) input.txt 16 ans.txt $(RUNS) $(MAXTHREADS)
 
 #compiles and runs the Pthread version with n=32

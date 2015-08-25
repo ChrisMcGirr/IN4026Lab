@@ -41,15 +41,13 @@ posix: par_posix.c fileIO.c
 
 #Runs all the versions in a batch format running through N=4096 to 262144	
 batch:
-	rm results/*
 	@echo "Starting Sequential Batch Run of Varying Input Sizes 16-48"	
 	@echo "RESULT for Sequential Batch:" > $(RESSEQ)_1.txt
 	@echo "Input N	 Execution Time	 Unit" > $(RESSEQ)_1.txt
 	@for n in 4096 8192 16384 32768 65536 131072 262144; do\
 		./$(SEQ) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) >> $(RESSEQ)_1.txt; \
 	done
-	@echo "Finised Sequential Batch Run. Check RESULTS"
-batchomp:	
+	@echo "Finised Sequential Batch Run. Check RESULTS"	
 	@echo "Starting OMP Batch Run of Varying Input Sizes 16-48"	
 	@for n in 1 2 4 8; do\
 		echo "RESULT OMP Batch for" $$n > $(RESOMP)_$$n.txt ; \
@@ -62,8 +60,7 @@ batchomp:
 		./$(OMP) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 8 >> $(RESOMP)_8.txt; \
 		#./$(OMP) Input_Data/input_$$n.txt $$n 1 1 $(RUNS) 16 >> $(RESOMP)_16.txt; \
 	done
-	@echo "Finised OMP Batch Run. Check RESULTS"
-batchposix:	
+	@echo "Finised OMP Batch Run. Check RESULTS"	
 	@echo "Starting POSIX Batch Run of Varying Input Sizes 16-48"	
 	@for n in 1 2 4 8; do\
 		echo "RESULT POSIX Batch for" $$n > $(RESPOS)_$$n.txt ; \
@@ -82,4 +79,4 @@ batchposix:
 
 #Cleans any results generate or binaries created
 clean:
-	rm results/* $(SEQ) $(OMP) $(POS)
+	-rm results/* $(SEQ) $(OMP) $(POS) output/*

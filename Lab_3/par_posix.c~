@@ -31,6 +31,8 @@ typedef struct args {
 	int *S;
 	int *R;
 	int *P;
+	int *R_temp;
+	int *P_temp;
 	int n;
 	int s1, e1;
 	int id;
@@ -73,7 +75,7 @@ int main(int argc, char **argv)
 	
 	char name[8] = "posix/";
 	
-	int status;
+	int status = 0;
 	int n;
 	int* S;
 	int* R;
@@ -104,12 +106,14 @@ int main(int argc, char **argv)
 	//Read the input array from file and save to memory
 	status = read_input(S, n, argv[1]);
 
-	if(status){
-		#ifdef DEBUG	
+	if(status){	
 		printf("Failed to Read Input S\n");
-		#endif
 		return 1;
 	}
+	
+	/*Declaring Temporary Arrays*/
+	int *P_temp = malloc(n*sizeof(int));	
+	int *R_temp = malloc(n*sizeof(int));
 
 	//Start of testing of the algorithm
 	int j, i;
@@ -145,6 +149,8 @@ int main(int argc, char **argv)
 			input[k].P = P;
 			input[k].n = n;
 			input[k].id = k;
+			input[k].R_temp = R_temp;
+			input[k].P_temp = P_temp;
 		}
 
 		/*Initialize the Array in Parrallel*/
@@ -210,7 +216,9 @@ int main(int argc, char **argv)
 
 	free(S);
 	free(R);
-	free(P);	
+	free(P);
+	free(R_temp);
+	free(P_temp);	
 	
     	return 0;
 }
@@ -227,12 +235,14 @@ int main(int argc, char **argv)
 *****************************************************************/
 void* arrayInit(void* argv){
 	int i;
-	int *S,*P,*R;
+	int *S,*P,*R, *R_temp, *P_temp;
 
 	args* input = (args*)argv;
 	S = input->S;
 	P = input->P;
 	R = input->R;
+	R_temp = input->R_temp;
+	P_temp = input->P_temp;
 
 	int status;
 	status = checkQueue(input);
@@ -244,6 +254,11 @@ void* arrayInit(void* argv){
 			P[i] = S[i];
 			if(S[i] > 0){
 				R[i] = 1;
+				R_temp[i] = 1;
+			}
+			else{
+				R[i] = 0;
+				R_temp[i] = 0;
 			}
 		}
 		arrayInit(input);	
@@ -254,6 +269,45 @@ void* arrayInit(void* argv){
 		if(input->id){		
 			pthread_exit(NULL);
 		}
+	}
+}
+/****************************************************************
+*
+*	Function: arrayCopy
+*	Input:	arg *argv	Pointer to Thread Struct
+*
+*	Output: returns nothing
+*
+*	Description: Copys the results from the temporary arrays
+*	to their respective output arrays
+*
+*****************************************************************/
+void* arrayCopy(void* argv){
+	int i;
+	int *S,*P,*R, *R_temp, *P_temp;
+
+	args* input = (args*)argv;
+	S = input->S;
+	P = input->P;
+	R = input->R;
+	R_temp = input->R_temp;
+	P_temp = input->P_temp;
+
+	int status;
+	status = checkQueue(input);
+
+	if(status>0){
+
+		for(i=(input->s1); i<(input->e1); i++){
+			R[i] = R_temp[i];
+			P[i] = P_temp[i];		
+		}
+		arrayCopy(input);	
+
+	}
+	else{	
+		/*Wait for all Threads to Finish*/
+		pthread_barrier_wait(&init);
 	}
 }
 /****************************************************************
@@ -272,12 +326,14 @@ void* arrayInit(void* argv){
 *****************************************************************/
 void* nodeLength(void* argv){
 	int i;
-	int *S,*P,*R;
+	int *S,*P,*R, *R_temp, *P_temp;
 
 	args* input = (args*)argv;
 	S = input->S;
 	P = input->P;
 	R = input->R;
+	R_temp = input->R_temp;
+	P_temp = input->P_temp;
 
 	int status;
 	status = checkQueue(input);
@@ -287,17 +343,31 @@ void* nodeLength(void* argv){
 		/*Process each node */
 		for(i=(input->s1); i<(input->e1); i++){
 			if(P[i] > 0){	
-				R[i] = R[i]+R[P[i]];
-				P[i] = P[P[i]];
+				R_temp[i] = R[i]+R[P[i]];			
+				P_temp[i] = P[P[i]];
 			}	
 		}
 
 		/*Check to see if more work is left*/
-		nodeLength(input);	
-
+		nodeLength(input);
 	}
 	else{	
 		/*Wait for other threads to finish step*/
+		pthread_barrier_wait(&barrier);
+
+		/*Reset Work Queue so we can start Copying Results Back*/
+		if(input->id == 0){ /*Only master touches it*/
+			jobs.queue1[0] = 0;
+			jobs.queue1[1] = input->n;
+		}
+
+		/*Wait for Master to update the Queue*/
+		pthread_barrier_wait(&barrier);
+
+		/*Start Copying array back*/		
+		arrayCopy(input);
+
+		/*Wait for other threads to finish*/
 		pthread_barrier_wait(&barrier);
 
 		/*Finished all steps*/
@@ -311,8 +381,10 @@ void* nodeLength(void* argv){
 			if(input->id == 0){ /*Only master touches it*/
 				jobs.m -= 1;		
 				jobs.queue1[0] = 0;
-				jobs.queue1[1] = n;
+				jobs.queue1[1] = input->n;
 			}
+			/*Wait for other threads to finish step*/
+			pthread_barrier_wait(&barrier);
 			nodeLength(input);
 		}
 	}
@@ -333,7 +405,7 @@ int checkQueue(args *input){
 	int nempty = 1;
 	int chunk;
 
-	if( (input->n) <= 50){
+	if( (input->n) <= 256){
 		chunk = 4; /*Used for small N*/
 	}
 	else{
@@ -366,7 +438,7 @@ int checkQueue(args *input){
 		nempty -= 1;	
 	}
 	if(jobs.m == 0){
-		nempty = -1;
+		nempty = -1; /*Signal that we're done all the log(n) steps*/
 	}
 
 	status = pthread_mutex_unlock(&queue_lock);

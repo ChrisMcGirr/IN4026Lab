@@ -25,7 +25,7 @@
 
 int minArray(int *A, int n);
 void psMin(int *A, int *P, int *S, int n);
-void minima(int *A, int n);
+void minima(int *A, int n, int *B);
 
 /****************************************************************
 *
@@ -115,7 +115,7 @@ int main(int argc, char **argv)
 
 	/*Output Results for small N*/
 	if(n<=50){
-		status = write_output(P, S, n);
+		status = write_output(P, S, n, name);
 		if(status){
 			printf("Failed to Write Output \n");
 			return 1;
@@ -152,16 +152,14 @@ int main(int argc, char **argv)
 *
 *****************************************************************/
 void psMin(int *A, int *P, int *S, int n){
-	int i;
-	int *B = malloc(n*sizeof(int));
-	for(i=0; i<n; i++){		
-		memcpy(B, A, n*sizeof(int));
+	int i;	
+	for(i=0; i<n; i++){	
 		P[i] = minArray(B, i+1); /*find prefix min*/
-		B[i] = A[i]; /*make sure the boundary is still correct*/
 		S[i] = minArray(&B[i], n-i); /*find suffix min*/
 	}
-	free(B);
+
 }
+
 /****************************************************************
 *
 *	Function: minArray
@@ -178,31 +176,44 @@ void psMin(int *A, int *P, int *S, int n){
 *****************************************************************/
 int minArray(int *A, int n){
 	int j, min, m;
-	int i;
+	int i, output;
 	min = INT_MAX;
 	m = ceil(log2(n));
-	
-	//Simple case
-	if(n==1){
+	int *B = malloc((n>>1)*sizeof(int));
+
+	if(n == 1){
 		return A[0];
 	}
-	//Cycle through Log2 levels of the array
-	for(j=1;j<=m;j++){
-		//Check to see if odd and save odd element
-		if(n%2){
-			min = A[n-1];
+
+	/*First Case to save A to B*/
+	if(n%2){
+		min = A[n-1];
+	}
+
+	n = n>>1;		
+	minima(A, n, B);
+
+	/*Cycle through the rest of Log2 levels of the B array*/
+	for(j=2;j<=m;j++){
+
+		/*Check to see if odd and save odd element*/
+		if((n%2) && (B[n-1] < min)){
+			min = B[n-1];
 		}
-		//calculate the min using balanced tree with even n
+
+		/*calculate the min using balanced tree with even n*/
 		n = n>>1;		
-		minima(A,n);
-		//check to see if the result of the tree is greater than min
-		if(A[0]>min) A[0] = min;		
+		minima(B, n, B);
+
+		/*check to see if the result of the tree is greater than min*/
+		if(B[0]>min) B[0] = min;		
 
 	}
 	
 	//just to make sure
-	if( min > A[0]) min = A[0];
+	if( min > B[0]) min = B[0];
 
+	free(B);
 	return min;
 }
 /****************************************************************
@@ -210,6 +221,7 @@ int minArray(int *A, int n){
 *	Function: minima
 *	Input:	int *A	Pointer to input array
 *		int n	Size of the array
+*		int *B 	Pointer to temporary array B
 *
 *	Output: void
 *
@@ -218,12 +230,12 @@ int minArray(int *A, int n){
 *	array position A[0]. Returns no value. 
 *
 *****************************************************************/
-void minima(int *A, int n){
+void minima(int *A, int n, int *B){
 	int p,l;
 	for(l=0; l<n; l++){
 		p = 2*l;
-		if(A[p]>A[p+1]) A[l] = A[p+1];
-		else A[l] = A[p];
+		if(A[p]>A[p+1]) B[l] = A[p+1];
+		else B[l] = A[p];
 	}
 
 }

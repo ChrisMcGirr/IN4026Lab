@@ -20,7 +20,7 @@ RESSEQ = results/batch_results_seq
 RESOMP = results/batch_results_omp
 RESPOS = results/batch_results_posix
 MAXTHREADS = 8
-RUNS = 1
+RUNS = 10
 
 all: seq omp posix batch
 
@@ -41,7 +41,6 @@ posix: par_posix.c
 
 #Runs all the versions in a batch format running through N=1 to 48	
 batch:
-	#rm results/*
 	@echo "Starting Sequential Batch Run of Varying Input Sizes 1-32"	
 	@echo "RESULT for Sequential Batch:" > $(RESSEQ)_1.txt
 	@echo "Input N	 Execution Time	 Unit" > $(RESSEQ)_1.txt
@@ -80,5 +79,5 @@ batch:
 
 #Cleans any results generate or binaries created
 clean:
-	rm results/* $(SEQ) $(OMP) $(POS)
+	rm results/* $(SEQ) $(OMP) $(POS) output/seq/* output/omp/* output/posix/*
 

@@ -41,7 +41,6 @@ posix: par_posix.c fileIO.c
 
 #Runs all the versions in a batch format running through N=4096 to 262144	
 batch:
-	rm results/*
 	@echo "Starting Sequential Batch Run of Varying Input Sizes 16-48"	
 	@echo "RESULT for Sequential Batch:" > $(RESSEQ)_1.txt
 	@echo "Input N	 Execution Time	 Unit" > $(RESSEQ)_1.txt
@@ -80,4 +79,4 @@ batch:
 
 #Cleans any results generate or binaries created
 clean:
-	rm results/* $(SEQ) $(OMP) $(POS)
+	rm results/* $(SEQ) $(OMP) $(POS) output/*

@@ -31,7 +31,7 @@ seq: seq.c fileIO.c fileIO.h makefile
 
 #compiles and runs the OMP version with n=32
 omp: par_omp.c
-	$(CC) $(OMP).c fileIO.c fileIO.h -o $(OMP) -fopenmp -lm
+	$(CC) $(OMP).c fileIO.c fileIO.h -o $(OMP) -fopenmp -lm -g
 	./$(OMP) input.txt 16 ans.txt $(RUNS) $(MAXTHREADS)
 
 #compiles and runs the Pthread version with n=32
@@ -41,7 +41,6 @@ posix: par_posix.c
 
 #Runs all the versions in a batch format running through N=1 to 48	
 batch:
-	#rm results/*
 	@echo "Starting Sequential Batch Run of Varying Input Sizes"	
 	@echo "RESULT for Sequential Batch:" > $(RESSEQ)_1.txt
 	@echo "Input N	 Execution Time	 Unit" > $(RESSEQ)_1.txt
@@ -80,5 +79,5 @@ batch:
 
 #Cleans any results generate or binaries created
 clean:
-	rm results/* $(SEQ) $(OMP) $(POS)
+	rm results/* $(SEQ) $(OMP) $(POS) output/seq/* output/omp/* output/posix/*
 

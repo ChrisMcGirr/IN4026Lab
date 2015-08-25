@@ -23,9 +23,10 @@
 
 #define CHUNKSIZE 256
 
-void nodeLength(int* S, int* R, int n);
+void nodeLength(int* S, int* R, int n, int *P_temp, int *R_temp, int *P);
 
 int MAX_THREADS;
+int chunk = CHUNKSIZE;
 
 
 /****************************************************************
@@ -46,7 +47,7 @@ int main(int argc, char **argv)
 	
 	char name[8] = "omp/";
 
-	int status;
+	int status=0;
 	int n;
 	int* S;
 	int* R;
@@ -67,6 +68,13 @@ int main(int argc, char **argv)
 	S = malloc(n*sizeof(int));
 	R = malloc(n*sizeof(int));
 
+	if(n<50){
+		chunk = 4; /*For Small N*/
+	}
+
+	omp_set_dynamic(0); //Makes sure the number of threads available is fixed    
+	omp_set_num_threads(MAX_THREADS); //Set thread number
+
 
 	if(S==NULL){
 		printf("Failed to Allocate Memory for Input Array S");	
@@ -85,21 +93,23 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	
-	
+	int *P_temp = malloc(n*sizeof(int));	
+	int *R_temp = malloc(n*sizeof(int));
+	int *P = malloc(n*sizeof(int));
+
 	//Start of testing of the algorithm
 	int j;
 	double average;
 	for(j=0; j<RUNS; j++){
 		memset(R, 0, n*sizeof(int));
 
-		
 		/*Start Timer*/
 		result.tv_sec=0;
 		result.tv_usec=0;
 		gettimeofday (&startt, NULL);
 
 		/*Start Algorithm*/
-		nodeLength(S, R, n);
+		nodeLength(S, R, n, P_temp, R_temp, P);
 
 		/*Stop Timer*/
 		gettimeofday (&endt, NULL);
@@ -135,7 +145,10 @@ int main(int argc, char **argv)
 	}
 
 	free(S);
-	free(R);	
+	free(R);
+	free(P_temp);
+	free(R_temp);
+	free(P);	
 	
     	return 0;
 }
@@ -153,23 +166,12 @@ int main(int argc, char **argv)
 *	distance is saved in the output array R. 
 *
 *****************************************************************/
-void nodeLength(int* S, int* R, int n){
-	int *P = malloc(n*sizeof(int));
-	int *P_temp = malloc(n*sizeof(int));	
-	int *R_temp = malloc(n*sizeof(int));		
+void nodeLength(int* S, int* R, int n, int *P_temp, int *R_temp, int *P){	
 	int i,j, m;
-	int chunk = CHUNKSIZE;
-	m = ceil(log2(n));
-
-	if(n<50){
-		chunk = 4; /*For Small N*/
-	}
-
-	omp_set_dynamic(0); //Makes sure the number of threads available is fixed    
-	omp_set_num_threads(MAX_THREADS); //Set thread number
+	m = floor(log2(n));
 
 	/*Copy Contents into working Array*/
-	#pragma omp parallel for schedule(dynamic, chunk) shared(S) private(i) num_threads(MAX_THREADS)
+	//#pragma omp parallel for schedule(dynamic, chunk) shared(S) private(i) num_threads(MAX_THREADS)
 	for(i=0; i<n; i++){
 		P[i] = S[i];
 		if(S[i] > 0){
@@ -183,25 +185,20 @@ void nodeLength(int* S, int* R, int n){
 	}
 
 	/*Process each node step by step*/
-	for(j=0; j<m; j++){
-		/*Process each node and save in Temp*/
-		#pragma omp parallel for schedule(dynamic, chunk) shared(R, P, R_temp, P_temp) private(i) num_threads(MAX_THREADS)
+	for(j=1; j<=m; j++){
+		//#pragma omp parallel for schedule(dynamic, chunk) shared(R, P, R_temp, P_temp) private(i) num_threads(MAX_THREADS)
 		for(i=0; i<n; i++){
 			if(P[i]>0){
 				R_temp[i] = R[i]+R[P[i]];			
 				P_temp[i] = P[P[i]];
 			}
 		}
-		/*Copy the temp variables back to original array*/
-		#pragma omp parallel for schedule(dynamic, chunk) shared(R, P, R_temp, P_temp) private(i) num_threads(MAX_THREADS)
+		//#pragma omp parallel for schedule(dynamic, chunk) shared(R, P, R_temp, P_temp) private(i) num_threads(MAX_THREADS)
 		for(i=0; i<n; i++){
 			R[i] = R_temp[i];
-			P[i] = P_temp[i];		
+			//P[i] = P_temp[i];		
 		}
+		
 	}
-	
-	free(P_temp);
-	free(R_temp);
-	free(P);
 }
 

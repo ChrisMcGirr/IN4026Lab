@@ -30,7 +30,7 @@ int MAX_THREADS; //Number of threads available
 
 void* psMin(void* args);
 int minArray(int *A, int n);
-void minima(int *A, int n);
+void minima(int *A, int n, int *B);
 
 //Arguements to be passed to all threads
 typedef struct data {
@@ -189,7 +189,7 @@ int main(int argc, char **argv)
 	}
 	/*Output Results if N is small*/
 	if(n<=50){
-		status = write_output(P, S, n);
+		status = write_output(P, S, n, name);
 		if(status){	
 			printf("Failed to Write Output \n");
 			return 1;
@@ -230,17 +230,12 @@ void* psMin(void* args){
 	start = input->start;
 	end = input->end;
 	id = input->id;
-	int *B = malloc(n*sizeof(int));	
-	
 
 	for(i=start; i<end; i++){
-		memcpy(B, A, n*sizeof(int));
-		P[i] = minArray(B, i+1);
-		B[i] = A[i];
-		S[i] = minArray(&B[i], n-i);
+		P[i] = minArray(A, i+1);
+		S[i] = minArray(&A[i], n-i);
 			
 	}
-	free(B);
 	pthread_barrier_wait(&barrier);
 	return NULL;
 }
@@ -260,37 +255,53 @@ void* psMin(void* args){
 *****************************************************************/
 int minArray(int *A, int n){
 	int j, min, m;
+	int i, output;
 	min = INT_MAX;
 	m = ceil(log2(n));
+	int *B = malloc((n>>1)*sizeof(int));
 
-	//Simple case
-	if(n==1){
+	if(n == 1){
 		return A[0];
 	}
-	//Cycle through Log2 levels of the array
-	for(j=1;j<=m;j++){
-		//Check to see if odd and save odd element
-		if(n%2){
-			min = A[n-1];
+
+	/*First Case to save A to B*/
+	if(n%2){
+		min = A[n-1];
+	}
+
+	n = n>>1;		
+	minima(A, n, B);
+
+	/*Cycle through the rest of Log2 levels of the B array*/
+	for(j=2;j<=m;j++){
+
+		/*Check to see if odd and save odd element*/
+		if((n%2) && (B[n-1] < min)){
+			min = B[n-1];
 		}
-		//calculate the min using balanced tree with even n
+
+		/*calculate the min using balanced tree with even n*/
 		n = n>>1;		
-		minima(A,n);
-		//check to see if the result of the tree is greater than min
-		if(A[0]>min) A[0] = min;		
+		minima(B, n, B);
+
+		/*check to see if the result of the tree is greater than min*/
+		if(B[0]>min) B[0] = min;		
 
 	}
 	
 	//just to make sure
-	if( min > A[0]) min = A[0];
+	if( min > B[0]) min = B[0];
 
+	free(B);
 	return min;
 }
+
 /****************************************************************
 *
 *	Function: minima
 *	Input:	int *A	Pointer to input array
 *		int n	Size of the array
+*		int *B 	Pointer to temporary array B
 *
 *	Output: void
 *
@@ -299,12 +310,12 @@ int minArray(int *A, int n){
 *	array position A[0]. Returns no value. 
 *
 *****************************************************************/
-void minima(int *A, int n){
+void minima(int *A, int n, int *B){
 	int p,l;
 	for(l=0; l<n; l++){
 		p = 2*l;
-		if(A[p]>A[p+1]) A[l] = A[p+1];
-		else A[l] = A[p];
+		if(A[p]>A[p+1]) B[l] = A[p+1];
+		else B[l] = A[p];
 	}
 
 }
