@@ -119,7 +119,7 @@ int read_input(int* A, int n, char* file) {
 int write_output(int *S, int *R, int n, char *name){
 
 	FILE *output;
-	char value[16];
+	char value[32];
 	sprintf(value,"results_%d.txt", n);
 
 	//create output file for arrays

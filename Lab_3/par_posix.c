@@ -252,6 +252,7 @@ void* arrayInit(void* argv){
 		/*Copy Contents into working Array and initalize R*/
 		for(i=(input->s1); i<(input->e1); i++){
 			P[i] = S[i];
+			P_temp[i] = S[i];
 			if(S[i] > 0){
 				R[i] = 1;
 				R_temp[i] = 1;
@@ -460,26 +461,47 @@ int checkQueue(args *input){
 *
 *****************************************************************/
 void generateArrays(int *A){
-	int i,j,k,m;
+	int i,j,k;
 	int *out;
+	int count,p;
 	int n=2048;
 
+	srand ( time(NULL) );
+	printf("Generating Inputs...\n");
 	for(i=1; i<8; i++){
-		n = n*2;
-		out = malloc(n*sizeof(int));
-		m = n/17;
-
-		for(j=0; j<m; j++){
-			for(k=0; k<17; k++){
-				if(A[k]){
-					out[k+17*j] = 17*j+A[k];
+		n = n*2+1;
+		printf("Input size %d \n",n-1);
+		out = (int *)calloc(n, sizeof(int));
+		count = 0;
+		p = rand()%n;
+		while(count < n){
+			k = rand()%n;
+			out[p] = k;
+			p = k;
+			count++;
+			if(count == n){
+				out[k] = 0;
+			}
+		}
+		out[0] = 0;
+		for(j=0; j<n; j++){
+			p = out[j];
+			while(count < n){
+				count++;
+				p = out[p];
+				if(p==0){
+					count = 0;
+					break;
 				}
-				else{
-					out[k+17*j] = 0;
+				if(count >= n){
+					printf("List has no end \n");
+					count=0;
+					break;
 				}
 			}
 		}
 		write_Array(out, n);
 		free(out);
+		n = n-1;
 	}
 }

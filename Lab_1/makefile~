@@ -79,4 +79,4 @@ batch:
 
 #Cleans any results generate or binaries created
 clean:
-	-rm results/* $(SEQ) $(OMP) $(POS) output/*
+	rm results/* $(SEQ) $(OMP) $(POS) output/*

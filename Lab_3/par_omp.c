@@ -168,12 +168,12 @@ int main(int argc, char **argv)
 *****************************************************************/
 void nodeLength(int* S, int* R, int n, int *P_temp, int *R_temp, int *P){	
 	int i,j, m;
-	m = floor(log2(n));
-
+	m = log2(n);
 	/*Copy Contents into working Array*/
-	//#pragma omp parallel for schedule(dynamic, chunk) shared(S) private(i) num_threads(MAX_THREADS)
+	#pragma omp parallel for schedule(dynamic, chunk) shared(S) private(i) num_threads(MAX_THREADS)
 	for(i=0; i<n; i++){
 		P[i] = S[i];
+		P_temp[i] = S[i];
 		if(S[i] > 0){
 			R[i] = 1;
 			R_temp[i] = 1;
@@ -183,20 +183,19 @@ void nodeLength(int* S, int* R, int n, int *P_temp, int *R_temp, int *P){
 			R_temp[i] = 0;
 		}
 	}
-
 	/*Process each node step by step*/
 	for(j=1; j<=m; j++){
-		//#pragma omp parallel for schedule(dynamic, chunk) shared(R, P, R_temp, P_temp) private(i) num_threads(MAX_THREADS)
+		#pragma omp parallel for schedule(dynamic, chunk) shared(R, P, R_temp, P_temp) private(i) num_threads(MAX_THREADS)
 		for(i=0; i<n; i++){
 			if(P[i]>0){
-				R_temp[i] = R[i]+R[P[i]];			
+				R_temp[i] = R[i]+R[P[i]];
 				P_temp[i] = P[P[i]];
 			}
 		}
-		//#pragma omp parallel for schedule(dynamic, chunk) shared(R, P, R_temp, P_temp) private(i) num_threads(MAX_THREADS)
+		#pragma omp parallel for schedule(dynamic, chunk) shared(R, P, R_temp, P_temp) private(i) num_threads(MAX_THREADS)
 		for(i=0; i<n; i++){
 			R[i] = R_temp[i];
-			//P[i] = P_temp[i];		
+			P[i] = P_temp[i];		
 		}
 		
 	}

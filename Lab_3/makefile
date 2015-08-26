@@ -20,7 +20,7 @@ RESSEQ = results/batch_results_seq
 RESOMP = results/batch_results_omp
 RESPOS = results/batch_results_posix
 MAXTHREADS = 8
-RUNS = 1
+RUNS = 100
 
 all: seq omp posix batch
 

@@ -201,7 +201,7 @@ int write_Array(int* A, int n){
 
 	FILE *output;
 	char name[64];
-	snprintf(name, sizeof(name), "input_data/input_%d.txt", n);
+	snprintf(name, sizeof(name), "input_data/input_%d.txt", n-1);
 	output = fopen(name, "w");
 	if(output==NULL){
 		printf("Failed to create the Input File \n");
