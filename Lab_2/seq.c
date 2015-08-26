@@ -130,7 +130,7 @@ int main(int argc, char **argv)
 	}
 	
 	/*Print Output only if less than 50 elements*/	
-	if( (n<50) && (m<=50) ){
+	if( (n<=64) && (m<=64) ){
 		status = write_output(A, B, C, n, m, name);
 	}
 
@@ -138,6 +138,10 @@ int main(int argc, char **argv)
 		printf("Failed to Write Output \n");
 		return 1;
 	}
+
+	/*Used to generate Inputs for the algorithm*/	
+//	generateInputs(2048); /*Large N*/
+//	generateInputs(1); /*Small N*/
 
 	/*Free Allocted Memory*/
 	free(A);

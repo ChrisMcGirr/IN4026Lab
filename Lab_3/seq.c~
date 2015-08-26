@@ -127,6 +127,9 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	/*Used to generate the input files for the batch run*/
+	generateArrays();
+
 	free(S);
 	free(R);	
 	
@@ -159,11 +162,13 @@ void nodeLength(int* S, int* R, int n){
 		}
 	}
 	/*Process each node sequential*/
-	for(i=0; i<n; i++){
-		while(P[i] > 0){	
-			R[i] = R[i]+R[P[i]];
-			P[i] = P[P[i]];
-		}	
+	for(j=0; j<m; j++){
+		for(i=0; i<n; i++){
+			if(P[i] > 0){	
+				R[i] = R[i]+R[P[i]];
+				P[i] = P[P[i]];
+			}	
+		}
 	}
 
 	free(P);

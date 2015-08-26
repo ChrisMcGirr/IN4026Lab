@@ -27,28 +27,46 @@ all: seq omp posix batch
 #compiles and runs the sequential version with n=32
 seq: seq.c fileIO.c fileIO.h makefile
 	$(CC) $(SEQ).c fileIO.c fileIO.h -o $(SEQ) -lm -fopenmp
-	./$(SEQ) input_A.txt input_B.txt 8 32 C_ans.txt $(RUNS) 
+	./$(SEQ) input_A.txt input_B.txt 8 32 C_ans.txt $(RUNS)
+	@echo "Lab Solution Saved to output/seq/results_8.txt"	
+	@echo "Starting Batch Run of Varying Input Sizes 2-16 to check output"	
+	@for n in 2 4 16; do\
+		./$(SEQ) input_data/input_$$n.txt input_data/input_32.txt $$n 32 1 $(RUNS); \
+	done 
+	@echo "Check the output/seq folder for the output of the program"
 
 #compiles and runs the OMP version with n=32
 omp: par_omp.c
 	$(CC) $(OMP).c fileIO.c fileIO.h -o $(OMP) -fopenmp -lm
 	./$(OMP) input_A.txt input_B.txt 8 32 C_ans.txt $(RUNS) $(MAXTHREADS)
+	@echo "Lab Solution Saved to output/omp/results_8.txt"	
+	@echo "Starting Batch Run of Varying Input Sizes 2-16 to check output"	
+	@for n in 2 4 16; do\
+		./$(OMP) input_data/input_$$n.txt input_data/input_32.txt $$n 32 1 $(RUNS) $(MAXTHREADS); \
+	done 
+	@echo "Check the output/omp folder for the output of the program"
 
 #compiles and runs the Pthread version with n=32
 posix: par_posix.c
 	$(CC) $(POS).c fileIO.c fileIO.h -o $(POS) -lpthread -lm -g
 	./$(POS) input_A.txt input_B.txt 8 32 C_ans.txt $(RUNS) $(MAXTHREADS)
+	@echo "Lab Solution Saved to output/posix/results_8.txt"	
+	@echo "Starting Batch Run of Varying Input Sizes 2-16 to check output"	
+	@for n in 2 4 16; do\
+		./$(POS) input_data/input_$$n.txt input_data/input_32.txt $$n 32 1 $(RUNS) $(MAXTHREADS); \
+	done 
+	@echo "Check the output/posix folder for the output of the program"
 
 #Runs all the versions in a batch format running through N=1 to 48	
 batch:
-	@echo "Starting Sequential Batch Run of Varying Input Sizes 1-32"	
+	@echo "Starting Sequential Batch Run of Varying Input Sizes 4096-262144"	
 	@echo "RESULT for Sequential Batch:" > $(RESSEQ)_1.txt
 	@echo "Input N	 Execution Time	 Unit" > $(RESSEQ)_1.txt
 	@for n in 4096 8192 16384 32768 65536 131072 262144; do\
 		./$(SEQ) input_data/input_$$n.txt input_262144.txt $$n 262144 1 $(RUNS) >> $(RESSEQ)_1.txt; \
 	done
 	@echo "Finised Sequential Batch Run. Check RESULTS"
-	@echo "Starting OMP Batch Run of Varying Input Sizes 1-32"	
+	@echo "Starting OMP Batch Run of Varying Input Sizes 4096-262144"	
 	@for n in 1 2 4 8; do\
 		echo "RESULT OMP Batch for P=" $$n > $(RESOMP)_$$n.txt ; \
 		echo "Input N	 Execution Time	 Unit" > $(RESOMP)_$$n.txt ; \
@@ -61,7 +79,7 @@ batch:
 		#./$(OMP) input_data/input_$$n.txt input_262144.txt $$n 262144 1 $(RUNS) 8 >> $(RESOMP)_16.txt; \
 	done
 	@echo "Finised OMP Batch Run. Check RESULTS"
-	@echo "Starting POSIX Batch Run of Varying Input Sizes 1-32"	
+	@echo "Starting POSIX Batch Run of Varying Input Sizes 4096-262144"	
 	@for n in 1 2 4 8; do\
 		echo "RESULT POSIX Batch for P=" $$n > $(RESPOS)_$$n.txt ; \
 		echo "Input N	 Execution Time	 Unit" > $(RESPOS)_$$n.txt ; \

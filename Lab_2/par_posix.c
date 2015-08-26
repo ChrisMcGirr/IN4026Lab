@@ -46,7 +46,6 @@ int checkQueue(args *input);
 void BinA(int *A, int *B, int *C, int n, int m, int start, int end);
 int rank(int a, int *B, int start, int end);
 int write_Array(int* A, int n);
-void generateInputs(int *A, int n);
 
 
 int RUNS;
@@ -205,7 +204,7 @@ int main(int argc, char **argv)
 	}
 	
 	/*Print Output only if less than 50 elements*/	
-	if( (n<50) && (m<=50) ){
+	if( (n<64) && (m<=64) ){
 		status = write_output(A, B, C, n, m, name);
 	}
 

@@ -4,12 +4,11 @@
 *	Student # 4415302
 *
 *	File: seq.c
-*	Description: The sequential version of the prefix and suffix
-*	minima algorithm. It takes as input an array A and computes the
-*	min of the prefix array and suffix array for a given index from
-*	1 to the array size. The results are saved to P and S respectively. 
-*	THe mimimum of the sub arrays are calculated using a balanced tree
-*	method. 
+*	Description: The sequential version of simple merge takes
+*	two sorted arrays A of size N and B of size of M as inputs 
+*	and creates another sorted array C or size N+M as output. 
+*	Uses the rank function to determine the index of an element
+*	of A in B and vice versa.
 *
 ******************************************************************/
 
@@ -131,7 +130,7 @@ int main(int argc, char **argv)
 	}
 	
 	/*Print Output only if less than 50 elements*/	
-	if( (n<50) && (m<=50) ){
+	if( (n<=64) && (m<=64) ){
 		status = write_output(A, B, C, n, m, name);
 	}
 
@@ -139,6 +138,10 @@ int main(int argc, char **argv)
 		printf("Failed to Write Output \n");
 		return 1;
 	}
+
+	/*Used to generate Inputs for the algorithm*/	
+	generateInputs(2048); /*Large N*/
+	generateInputs(1); /*Small N*/
 
 	/*Free Allocted Memory*/
 	free(A);

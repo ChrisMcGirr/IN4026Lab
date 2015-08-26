@@ -20,4 +20,4 @@ int read_input(int* A, int n, char* file);
 int outputCheck(int *C,char* cfile, int n);
 int write_output(int *A, int *B, int* C, int n, int m, char *name);
 int write_Array(int* A, int n);
-void generateInputs();
+void generateInputs(int n);

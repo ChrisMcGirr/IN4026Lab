@@ -120,11 +120,11 @@ int read_input(int* A, int n, char* file) {
 int write_output(int *A, int *B, int* C, int n, int m, char *name){
 
 	FILE *output;
-	char value[16];
+	char value[64];
 	sprintf(value,"results_%d.txt", n);
 
 	//create output file for arrays
-	char file[64] = "output/";
+	char file[128] = "output/";
 	strcat(file, name);
 	strcat(file, value);
 	output = fopen(file, "w");
@@ -197,9 +197,9 @@ int write_output(int *A, int *B, int* C, int n, int m, char *name){
 *	elements.
 *
 *****************************************************************/
-void generateInputs(){
+void generateInputs(int n){
 	int i,j;
-	int n = 2048;
+	int temp;
 	int *A;
 
 	/*Generate Seed*/
@@ -210,7 +210,11 @@ void generateInputs(){
 		A = malloc(n*sizeof(int));
 		A[0]= 0;
 		for(j=1; j<n; j++){
-			A[j] = A[j-1]+3; /*So A[j]<A[j+1]*/
+			temp = A[j-1]+rand()%8; /*So A[j]<A[j+1]*/
+			while(temp <= A[j-1]){
+				temp = A[j-1]+rand()%8;
+			}
+			A[j] = temp;
 		}
 		write_Array(A, n);
 		free(A);
@@ -231,7 +235,7 @@ void generateInputs(){
 int write_Array(int* A, int n){
 
 	FILE *output;
-	char name[64];
+	char name[128];
 	snprintf(name, sizeof(name), "input_data/input_%d.txt", n);
 	output = fopen(name, "w");
 	if(output==NULL){

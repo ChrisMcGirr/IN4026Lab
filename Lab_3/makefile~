@@ -20,7 +20,7 @@ RESSEQ = results/batch_results_seq
 RESOMP = results/batch_results_omp
 RESPOS = results/batch_results_posix
 MAXTHREADS = 8
-RUNS = 10
+RUNS = 100
 
 all: seq omp posix batch
 
@@ -28,6 +28,12 @@ all: seq omp posix batch
 seq: seq.c fileIO.c fileIO.h makefile
 	$(CC) $(SEQ).c fileIO.c fileIO.h -o $(SEQ) -lm -fopenmp
 	./$(SEQ) input.txt 16 ans.txt $(RUNS) 
+	@echo "Lab Solution Saved to output/seq/results_8.txt"	
+	@echo "Starting Batch Run of Varying Input Sizes 2-16 to check output"	
+	@for n in 2 4 16; do\
+		./$(SEQ) input_data/input_$$n.txt $$n 1 $(RUNS)  \
+	done 
+	@echo "Check the output/seq folder for the output of the program"
 
 #compiles and runs the OMP version with n=32
 omp: par_omp.c

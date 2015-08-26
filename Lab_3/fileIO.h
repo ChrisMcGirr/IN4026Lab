@@ -15,9 +15,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 int read_input(int* A, int n, char* file);
 int outputCheck(int *C,char* cfile, int n);
 int write_output(int *S, int *R, int n, char *name);
 int write_Array(int* A, int n);
 void generateInputs(int *A, int n);
+void generateArrays();

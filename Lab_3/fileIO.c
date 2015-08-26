@@ -218,3 +218,60 @@ int write_Array(int* A, int n){
 
 	return 0;
 }
+/****************************************************************
+*
+*	Function: generateArrays
+*	Input:	int *A		Pointer to valid 16 length array
+*
+*	Output: void	
+*
+*	Description: Creates inputs for the algorithm of varying
+*	sizes from 4096 doubling the size each time by 2. Outputs
+*	them as text files to be read back by the algorithm.	
+*
+*****************************************************************/
+void generateArrays(){
+	int i,j;
+	int *out;
+	int count,p,s;
+	int n=2048;
+
+	srand ( time(NULL) );
+	printf("Generating Inputs...\n");
+	for(i=1; i<8; i++){
+		n = n*2+1;
+		printf("Input size %d \n",n-1);
+		out = (int *)calloc(n, sizeof(int));
+		/*Create the array*/
+		for(j=0; j<n; j++){
+			out[j] = j;
+		}
+		for(j=0; j<n; j++){
+			p = rand()%(n-1);
+			s = out[j];
+			/*Swap the nodes*/
+			out[j] = out[p];
+			out[p] = s;
+		}
+		/*Sanity Check: Make sure length of all nodes is less than n*/
+		for(j=0; j<n; j++){
+			p = out[j];
+			while(count < n){
+				count++;
+				p = out[p];
+				if(p==0){
+					count = 0;
+					break;
+				}
+				if(count >= n){
+					printf("List has no end \n");
+					count=0;
+					break;
+				}
+			}
+		}
+		write_Array(out, n);
+		free(out);
+		n = n-1;
+	}
+}

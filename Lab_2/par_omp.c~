@@ -139,7 +139,7 @@ int main(int argc, char **argv)
 	}
 
 	/*Print Output only if less than 50 elements*/	
-	if( (n<50) && (m<=50) ){
+	if( (n<=64) && (m<=64) ){
 		status = write_output(A, B, C, n, m, name);
 	}
 
@@ -147,9 +147,6 @@ int main(int argc, char **argv)
 		printf("Failed to Write Output \n");
 		return 1;
 	}
-
-	/*Used to generate Inputs for the algorithm*/	
-//	generateInputs();
 
 	free(A);
 	free(B);
@@ -182,8 +179,8 @@ void simpleMerge(int *A, int *B, int *C, int n, int m){
 	int i;
 	int chunk = CHUNKSIZE;
 
-	//omp_set_dynamic(0); //Makes sures the number of threads available is fixed    
-	//omp_set_num_threads(MAX_THREADS); //Set thread number
+	omp_set_dynamic(0); //Makes sures the number of threads available is fixed    
+	omp_set_num_threads(MAX_THREADS); //Set thread number
 
 	#pragma omp parallel for schedule(dynamic, chunk) shared(AA, BB, chunk) private(i) num_threads(MAX_THREADS)
 	for(i=0; i<n; i++){

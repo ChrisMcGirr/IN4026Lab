@@ -127,6 +127,9 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
+	/*Used to generate the input files for the batch run*/
+//	generateArrays();
+
 	free(S);
 	free(R);	
 	

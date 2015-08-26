@@ -17,7 +17,6 @@
 #include <string.h>
 #include <time.h>
 #include <limits.h>
-#include <math.h>
 #include "fileIO.h"
 #include <pthread.h>
 
@@ -46,7 +45,6 @@ typedef struct queue {
 void* nodeLength(void* argv);
 void* arrayInit(void* argv);
 int checkQueue(args *input);
-void generateArrays(int *A);
 
 
 int RUNS;
@@ -211,9 +209,6 @@ int main(int argc, char **argv)
 		return 1;
 	}
 	
-	/*Used to generate the input files for the batch run*/
-//	generateArrays(S);
-
 	free(S);
 	free(R);
 	free(P);
@@ -447,61 +442,4 @@ int checkQueue(args *input){
 		printf("ERROR in CheckQueue(): pthread_mutex_unlock \n");
 	}
 	return nempty;
-}
-/****************************************************************
-*
-*	Function: generateArrays
-*	Input:	int *A		Pointer to valid 16 length array
-*
-*	Output: void	
-*
-*	Description: Creates inputs for the algorithm of varying
-*	sizes from 4096 doubling the size each time by 2. Outputs
-*	them as text files to be read back by the algorithm.	
-*
-*****************************************************************/
-void generateArrays(int *A){
-	int i,j,k;
-	int *out;
-	int count,p;
-	int n=2048;
-
-	srand ( time(NULL) );
-	printf("Generating Inputs...\n");
-	for(i=1; i<8; i++){
-		n = n*2+1;
-		printf("Input size %d \n",n-1);
-		out = (int *)calloc(n, sizeof(int));
-		count = 0;
-		p = rand()%n;
-		while(count < n){
-			k = rand()%n;
-			out[p] = k;
-			p = k;
-			count++;
-			if(count == n){
-				out[k] = 0;
-			}
-		}
-		out[0] = 0;
-		for(j=0; j<n; j++){
-			p = out[j];
-			while(count < n){
-				count++;
-				p = out[p];
-				if(p==0){
-					count = 0;
-					break;
-				}
-				if(count >= n){
-					printf("List has no end \n");
-					count=0;
-					break;
-				}
-			}
-		}
-		write_Array(out, n);
-		free(out);
-		n = n-1;
-	}
 }

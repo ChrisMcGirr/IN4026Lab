@@ -58,7 +58,7 @@ int main(int argc, char **argv)
 	//Check if app was given enough input
 	if(argc < 8){
 		printf("Missing Arguement Parameters\n");
-		printf("Format ./seq path_input_A path_input_B A_size B_size  C_ans_Path RUNS Max_Threads\n");
+		printf("Format ./omp path_input_A path_input_B A_size B_size  C_ans_Path RUNS Max_Threads\n");
 		return 1;
 	}
 	
@@ -139,7 +139,7 @@ int main(int argc, char **argv)
 	}
 
 	/*Print Output only if less than 50 elements*/	
-	if( (n<50) && (m<=50) ){
+	if( (n<=64) && (m<=64) ){
 		status = write_output(A, B, C, n, m, name);
 	}
 
@@ -147,9 +147,6 @@ int main(int argc, char **argv)
 		printf("Failed to Write Output \n");
 		return 1;
 	}
-
-	/*Used to generate Inputs for the algorithm*/	
-//	generateInputs();
 
 	free(A);
 	free(B);
