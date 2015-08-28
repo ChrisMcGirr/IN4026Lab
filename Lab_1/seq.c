@@ -26,6 +26,7 @@
 int minArray(int *A, int n);
 void psMin(int *A, int *P, int *S, int n);
 void minima(int *A, int n, int *B);
+int minElement(int a, int b);
 
 /****************************************************************
 *
@@ -152,14 +153,52 @@ int main(int argc, char **argv)
 *
 *****************************************************************/
 void psMin(int *A, int *P, int *S, int n){
-	int i;	
+	int i;					/*Loop iterator*/
+	int pmin = INT_MAX;			/*Current prefix min*/
+	int smin = minArray(&A[1], n-1);	/*Start by finding the min for the whole array except A[0]*/
+	int remove = 0; 			/*Flag to indicate the min will be removed on the next iteration*/
+
 	for(i=0; i<n; i++){	
-		P[i] = minArray(A, i+1); /*find prefix min*/
-		S[i] = minArray(&A[i], n-i); /*find suffix min*/
+		P[i] = minElement(pmin, A[i]); 	/*find prefix min*/
+		pmin = P[i];
+		/*The new element is not less than current*/
+		if(A[i] > smin){
+			S[i] = smin;
+		}
+		/*The last min was lost, have to calculate the new one*/
+		if(remove){
+			S[i] = minArray(&A[i], n-i);
+			smin = S[i];
+			remove = 0;
+		}
+		/*Going to loss the min in next iteration have to indicate this*/
+		if(A[i] == smin){
+			S[i] = smin;
+			remove = 1;
+		}
+
 	}
 
 }
-
+/****************************************************************
+*
+*	Function: psMin
+*	Input:	int a	element a
+*		int b	element b
+*
+*	Output: int	the min of a and b
+*
+*	Description: Finds which element is the minimum of the two
+*
+*****************************************************************/
+int minElement(int a, int b){
+	if(a>=b){
+		return b;
+	}
+	else{
+		return a;
+	}
+}
 /****************************************************************
 *
 *	Function: minArray
