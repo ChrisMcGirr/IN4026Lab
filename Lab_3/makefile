@@ -19,7 +19,7 @@ POS = par_posix
 RESSEQ = results/batch_results_seq
 RESOMP = results/batch_results_omp
 RESPOS = results/batch_results_posix
-MAXTHREADS = 8
+MAXTHREADS = 16
 RUNS = 100
 
 all: seq omp posix batch
@@ -49,7 +49,7 @@ batch:
 	done
 	@echo "Finised Sequential Batch Run. Check RESULTS"
 	@echo "Starting OMP Batch Run of Varying Input Sizes"
-	@for n in 1 2 4 8; do\
+	@for n in 1 2 4 8 16; do\
 		echo "RESULT OMP Batch for P=" $$n > $(RESOMP)_$$n.txt ; \
 		echo "Input N	 Execution Time	 Unit" > $(RESOMP)_$$n.txt ; \
 	done	
@@ -58,11 +58,11 @@ batch:
 		./$(OMP) input_data/input_$$n.txt $$n 1 $(RUNS) 2 >> $(RESOMP)_2.txt; \
 		./$(OMP) input_data/input_$$n.txt $$n 1 $(RUNS) 4 >> $(RESOMP)_4.txt; \
 		./$(OMP) input_data/input_$$n.txt $$n 1 $(RUNS) 8 >> $(RESOMP)_8.txt; \
-		#./$(OMP) input_data/input_$$n.txt $$n 1 $(RUNS) 16 >> $(RESOMP)_16.txt; \
+		./$(OMP) input_data/input_$$n.txt $$n 1 $(RUNS) 16 >> $(RESOMP)_16.txt; \
 	done
 	@echo "Finised OMP Batch Run. Check RESULTS"
 	@echo "Starting POSIX Batch Run of Varying Input Sizes"	
-	@for n in 1 2 4 8; do\
+	@for n in 1 2 4 8 16; do\
 		echo "RESULT POSIX Batch for P=" $$n > $(RESPOS)_$$n.txt ; \
 		echo "Input N	 Execution Time	 Unit" > $(RESPOS)_$$n.txt ; \
 	done
@@ -71,7 +71,7 @@ batch:
 		./$(POS) input_data/input_$$n.txt $$n 1 $(RUNS) 2 >> $(RESPOS)_2.txt; \
 		./$(POS) input_data/input_$$n.txt $$n 1 $(RUNS) 4 >> $(RESPOS)_4.txt; \
 		./$(POS) input_data/input_$$n.txt $$n 1 $(RUNS) 8 >> $(RESPOS)_8.txt; \
-		#./$(POS) input_data/input_$$n.txt $$n 1 $(RUNS) 16 >> $(RESPOS)_16.txt; \
+		./$(POS) input_data/input_$$n.txt $$n 1 $(RUNS) 16 >> $(RESPOS)_16.txt; \
 	done
 	@echo "Finised POSIX Batch Run. Check RESULTS"
 

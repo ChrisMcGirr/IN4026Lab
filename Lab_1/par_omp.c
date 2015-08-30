@@ -25,12 +25,11 @@
 int RUNS; /*Number of Runs of the algorithm*/
 int MAX_THREADS; /*Number of threads available*/
 int CHUNKSIZE = 256;
-int m, k; /*Number of threads given to each parallel section*/
 
 int minArray(int *A, int n);
 void psMin(int *A, int *P, int *S, int n);
 void minima(int *A, int n, int *B);
-int minElement(int a, int b);
+
 
 /****************************************************************
 *
@@ -154,84 +153,23 @@ int main(int argc, char **argv)
 *****************************************************************/
 void psMin(int *A, int *P, int *S, int n){
 	int i;
-	int tid, length, start, end, pmin, smin, remove;
-
-	if(MAX_THREADS == 1){
-		m = 1;
-		k = 1;
-	}
-	if(MAX_THREADS == 2){
-		m = 2;
-		k = 1;
-	}
-	if(MAX_THREADS == 4){
-		m = 2;
-		k = 2;
-	}
-	if(MAX_THREADS == 8){
-		m = 4;
-		k = 2;
-	}
-	if(MAX_THREADS == 16){
-		m = 4;
-		k = 4;
+	int chunk = CHUNKSIZE;
+	if(n<=256){
+		chunk=8;
 	}
 
-	#pragma omp parallel shared(A, P, S, n) private(i,tid, length, start, end, pmin, smin, remove) num_threads(m)
+	omp_set_dynamic(0); //Makes sures the number of threads available is fixed    
+	omp_set_num_threads(MAX_THREADS); //Set thread number
+
+	#pragma omp parallel shared(P,A,S) private(i)
 	{
-		tid = omp_get_thread_num();
-		length = n/m;
-		
-		/*Start and end of Thread's work*/
-		start = tid*length;
-		end = (tid+1)*length;
-		
-		/*Find the Min of the respective parts of the array*/
-		pmin = minArray(&A[0], start+1);
-		smin = minArray(&A[start], n-start);
-
-		/*Flag to indicate the min will be removed next iteration*/
-		remove = 0;
-
-		for(i=start; i<end; i++){	
-			P[i] = minElement(pmin, A[i]); /*find prefix min*/
-			pmin = P[i];
-			if(A[i] > smin){
-				S[i] = smin;
-			}
-			if(remove){
-				S[i] = minArray(&A[i], n-i);
-				smin = S[i];
-				remove = 0;
-			}
-			if(A[i] == smin ){
-				S[i] = smin;
-				remove = 1;
-			}
-
+		#pragma omp for schedule(dynamic, chunk) nowait
+		for(i=0; i<n; i++){
+			P[i] = minArray(A, i+1); //find prefix 
+			S[i] = minArray(&A[i], n-i); //find suffix
 		}
 	}
-
 	
-}
-/****************************************************************
-*
-*	Function: psMin
-*	Input:	int a	element a
-*		int b	element b
-*
-*	Output: int	the min of a and b
-*
-*	Description: Finds which element is the minimum of the two
-*
-*****************************************************************/
-int minElement(int a, int b){
-	if(a>=b){
-		return b;
-	}
-	else{
-		return a;
-	}
 }
 /****************************************************************
 *
@@ -310,12 +248,14 @@ void minima(int *A, int n, int *B){
 	if(n<=256){
 		chunk=8;
 	}
-
-	#pragma omp parallel for schedule(dynamic, chunk) shared(A) private(l,p) num_threads(k)
-	for(l=0; l<n; l++){
-		p = 2*l;
-		if(A[p]>A[p+1]) B[l] = A[p+1];
-		else B[l] = A[p];
+	#pragma omp parallel shared(A) private(l, p)
+	{
+		#pragma omp for schedule(dynamic, chunk) nowait
+		for(l=0; l<n; l++){
+			p = 2*l;
+			if(A[p]>A[p+1]) B[l] = A[p+1];
+			else B[l] = A[p];
+		}
 	}
 
 }
